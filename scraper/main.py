@@ -114,8 +114,7 @@ def main():
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
         
-    print(f"
-完了しました。データは {OUTPUT_FILE} に保存されました。")
+    print(f"\n完了しました。データは {OUTPUT_FILE} に保存されました。")
 
 if __name__ == "__main__":
     main()
