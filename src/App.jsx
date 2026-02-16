@@ -399,6 +399,7 @@ export default function App() {
   const [prompts, setPrompts] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchMode, setSearchMode] = useState("smart");
   const [activeC1, setActiveC1] = useState("");
   const [showNew, setShowNew] = useState(false);
@@ -449,20 +450,26 @@ export default function App() {
     }
   }, [prompts, favs, isLoaded, selectedAiTool, useQuery]);
 
+  // ─── 検索デバウンス: 日本語IME入力完了を待つ ───
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
   const filtered = useMemo(() => {
     let list = prompts;
-    if (query) {
-      list = searchPrompts(list, query, searchMode, contentsData);
+    if (debouncedQuery) {
+      list = searchPrompts(list, debouncedQuery, searchMode, contentsData);
     }
     if (activeC1) list = list.filter(p => p.c1 === activeC1);
     if (showNew) list = list.filter(p => p.isNew);
     if (showFav) list = list.filter(p => favs.has(p.id));
     return list;
-  }, [prompts, query, searchMode, activeC1, showNew, showFav, favs]);
+  }, [prompts, debouncedQuery, searchMode, activeC1, showNew, showFav, favs]);
 
   // 検索結果のマッチタイプ集計
   const matchTypeSummary = useMemo(() => {
-    if (!query) return null;
+    if (!debouncedQuery) return null;
     const types = { keyword: 0, intent: 0, fuzzy: 0 };
     filtered.forEach(p => {
       const mt = p._matchType || "";
@@ -471,11 +478,11 @@ export default function App() {
       if (mt.includes("fuzzy")) types.fuzzy++;
     });
     return types;
-  }, [filtered, query]);
+  }, [filtered, debouncedQuery]);
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paged = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
-  useEffect(() => setPage(0), [query, searchMode, activeC1, showNew, showFav]);
+  useEffect(() => setPage(0), [debouncedQuery, searchMode, activeC1, showNew, showFav]);
 
   const toggleFav = (id) => { setFavs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); };
   const handleSave = (form) => {
@@ -516,7 +523,7 @@ export default function App() {
             </button>
           ))}
         </div>
-        {query && filtered.length > 0 && matchTypeSummary && (
+        {debouncedQuery && filtered.length > 0 && matchTypeSummary && (
           <div className="search-info">
             <span className="search-result-count">{filtered.length}件</span>
             <span className="search-match-types">
@@ -526,7 +533,7 @@ export default function App() {
             </span>
           </div>
         )}
-        {query && filtered.length === 0 && (
+        {debouncedQuery && filtered.length === 0 && (
           <div className="search-info">
             <span className="search-result-count search-no-result">0件 - 検索条件を変えてお試しください</span>
           </div>
