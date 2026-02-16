@@ -304,6 +304,44 @@ body.dark .match-fuzzy {
 .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 1px 4px rgba(99, 102, 241, 0.25); }
 body.dark .chip.active { box-shadow: 0 1px 4px rgba(165, 180, 252, 0.2); }
 
+/* ─── Mobile Filter Chips: Horizontal Scroll ────────────────────────────── */
+@media (max-width: 640px) {
+  .filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+    padding: 10px 16px;
+    gap: 6px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(
+      to right,
+      transparent 0px,
+      black 16px,
+      black calc(100% - 24px),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0px,
+      black 16px,
+      black calc(100% - 24px),
+      transparent 100%
+    );
+  }
+  .filters::-webkit-scrollbar {
+    display: none;
+  }
+  .filters .chip {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    font-size: 11px;
+    padding: 4px 12px;
+  }
+}
+
 .chip-count {
   font-size: 10px;
   font-weight: 700;
@@ -530,6 +568,232 @@ body.dark .card-footer { background: rgba(255, 255, 255, 0.02); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* ─── PromptRunModal: Full Layout ───────────────────────────────────────── */
+.run-modal {
+  max-width: 960px;
+  height: 80vh;
+  max-height: 800px;
+}
+
+@media (max-width: 767px) {
+  .run-modal-backdrop {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+  .run-modal {
+    max-width: none;
+    border-radius: 0;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    height: calc(100dvh - var(--keyboard-offset, 0px));
+  }
+}
+
+/* ─── Run Modal Header ──────────────────────────────────────────────────── */
+.run-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-shrink: 0;
+}
+.run-modal-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.run-modal-meta {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--ink3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 767px) {
+  .run-modal-header { padding: 10px 14px; }
+  .run-modal-title { font-size: 14px; }
+  .run-modal-meta { font-size: 10px; }
+}
+
+/* ─── Run Modal Icon Buttons ────────────────────────────────────────────── */
+.run-modal-icon-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.run-modal-icon-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+@media (max-width: 767px) {
+  .run-modal-icon-btn { width: 30px; height: 30px; }
+}
+
+/* ─── Run Modal Settings ────────────────────────────────────────────────── */
+.run-modal-settings {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.run-modal-settings-note {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: var(--ink3);
+  width: 100%;
+}
+@media (max-width: 767px) {
+  .run-modal-settings { padding: 8px 14px; }
+}
+
+/* ─── Run Modal Footer ──────────────────────────────────────────────────── */
+.run-modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  flex-shrink: 0;
+}
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .run-modal-footer {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 767px) {
+  .run-modal-footer { padding: 10px 14px; }
+  .run-modal-cancel { display: none; }
+}
+
+/* ─── Mobile Tab Bar ────────────────────────────────────────────────────── */
+.mobile-tab-bar {
+  display: none;
+  flex-shrink: 0;
+}
+@media (max-width: 767px) {
+  .mobile-tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+  }
+  .mobile-tab {
+    flex: 1;
+    padding: 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-en), var(--font-ja);
+    text-align: center;
+    border: none;
+    background: transparent;
+    color: var(--ink3);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s ease;
+  }
+  .mobile-tab.active {
+    color: var(--primary);
+  }
+  .mobile-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    background: var(--primary);
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* ─── Tab-based content switching ─── */
+  .modal-content-wrapper.mobile-tab-preview .prompt-form {
+    display: none;
+  }
+  .modal-content-wrapper.mobile-tab-preview .prompt-preview {
+    display: flex;
+  }
+  .modal-content-wrapper.mobile-tab-form .prompt-preview {
+    display: none;
+  }
+  .modal-content-wrapper.mobile-tab-form .prompt-form {
+    display: block;
+    max-height: none;
+    border-bottom: none;
+    overflow-y: auto;
+  }
+}
+
+/* ─── Preview Header ────────────────────────────────────────────────────── */
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+/* ─── Preview Maximize Button ───────────────────────────────────────────── */
+.preview-maximize-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--card);
+  color: var(--ink3);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.preview-maximize-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+/* ─── Maximized Mode ────────────────────────────────────────────────────── */
+.run-modal-maximized .run-modal-header,
+.run-modal-maximized .run-modal-settings,
+.run-modal-maximized .mobile-tab-bar,
+.run-modal-maximized .run-modal-footer {
+  display: none;
+}
+.run-modal-maximized .modal-content-wrapper {
+  grid-template-columns: 1fr !important;
+}
+.run-modal-maximized .prompt-form {
+  display: none;
+}
+.run-modal-maximized .prompt-preview {
+  display: flex;
+}
+@supports (padding-top: env(safe-area-inset-top)) {
+  .run-modal-maximized .prompt-preview {
+    padding-top: calc(16px + env(safe-area-inset-top));
+  }
+}
+
 /* ─── Modal Layout (PromptRunModal) ──────────────────────────────────────── */
 .modal-content-wrapper {
   display: grid;
@@ -551,7 +815,7 @@ body.dark .card-footer { background: rgba(255, 255, 255, 0.02); }
   background-color: var(--card);
 }
 @media (max-width: 767px) {
-  .prompt-form { border-right: none; border-bottom: 1px solid var(--border); max-height: 40vh; }
+  .prompt-form { border-right: none; border-bottom: 1px solid var(--border); }
 }
 
 .prompt-preview { background: var(--bg); padding: 24px; display: flex; flex-direction: column; overflow: hidden; }

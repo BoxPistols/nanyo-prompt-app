@@ -51,6 +51,8 @@ const Icons = {
 // ─── Modal: PromptRunModal ──────────────────────────────────────────────────
 const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool, useQuery, setUseQuery }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [mobileTab, setMobileTab] = useState("preview"); // "preview" | "form"
+  const [isMaximized, setIsMaximized] = useState(false);
   // コンテンツ解析: 本文抽出、セクション変数抽出、UI混入テキスト除去
   const { promptText, inlinePlaceholders, additionalVars, allPlaceholders } = useMemo(() => {
     let content = (contentsData[item.id] || "プロンプトの本文が読み込めませんでした。")
@@ -102,6 +104,44 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool, useQ
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
+
+  // ─── Keyboard awareness via visualViewport API ───
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handleResize = () => {
+      const keyboardOffset = window.innerHeight - vv.height;
+      document.documentElement.style.setProperty(
+        '--keyboard-offset',
+        `${Math.max(0, keyboardOffset)}px`
+      );
+    };
+    vv.addEventListener('resize', handleResize);
+    vv.addEventListener('scroll', handleResize);
+    return () => {
+      vv.removeEventListener('resize', handleResize);
+      vv.removeEventListener('scroll', handleResize);
+      document.documentElement.style.removeProperty('--keyboard-offset');
+    };
+  }, []);
+
+  // ─── Prevent body scroll when modal is open ───
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
 
   // クリップボード用テキスト: インライン変数を置換 + 追加変数を末尾に付加
   const finalPromptText = useMemo(() => {
@@ -199,65 +239,86 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool, useQ
     setTimeout(() => setPasteStatus(false), 2000);
   };
 
+  const hasForm = allPlaceholders.length > 0;
+
   return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: '1100px', height: '90vh' }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--card)', zIndex: 10, flexShrink: 0 }}>
+    <div className="modal-backdrop run-modal-backdrop" onClick={onClose}>
+      <div className={`modal run-modal ${isMaximized ? 'run-modal-maximized' : ''}`} onClick={(e) => e.stopPropagation()}>
+        {/* ─── Header (compact on mobile) ─── */}
+        <div className="run-modal-header">
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h2>
-            <p style={{ fontSize: '11px', color: 'var(--ink3)', margin: '4px 0 0' }}>#{item.id} - {item.c1} / {item.c2}</p>
+            <h2 className="run-modal-title">{item.title}</h2>
+            <p className="run-modal-meta">#{item.id} - {item.c1} / {item.c2}</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button 
-              onClick={() => setShowSettings(!showSettings)} 
-              style={{ border: 'none', background: showSettings ? 'var(--primary-light)' : 'transparent', borderRadius: '6px', cursor: 'pointer', color: showSettings ? 'var(--primary)' : 'var(--ink3)', padding: '6px', display: 'flex' }}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="run-modal-icon-btn"
+              style={{ background: showSettings ? 'var(--primary-light)' : 'transparent', color: showSettings ? 'var(--primary)' : 'var(--ink3)' }}
               title="AIツールの設定"
             >
               <Icons.Settings />
             </button>
-            <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: '24px', cursor: 'pointer', color: 'var(--ink2)', padding: '4px' }}>×</button>
+            <button onClick={onClose} className="run-modal-icon-btn" style={{ fontSize: '20px', color: 'var(--ink2)' }}>×</button>
           </div>
         </div>
-        
+
         {showSettings && (
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg)', animation: 'modal-in 0.2s ease-out' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink2)' }}>貼り付け先AIツール:</span>
+          <div className="run-modal-settings">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--ink2)' }}>AIツール:</span>
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {AI_TOOLS.map(tool => (
-                  <button
-                    key={tool.id}
-                    onClick={() => setSelectedAiTool(tool.id)}
-                    className={`chip ${selectedAiTool === tool.id ? 'active' : ''}`}
-                    style={{ padding: '4px 12px' }}
-                  >
+                  <button key={tool.id} onClick={() => setSelectedAiTool(tool.id)} className={`chip ${selectedAiTool === tool.id ? 'active' : ''}`} style={{ padding: '3px 10px', fontSize: '11px' }}>
                     {tool.name}
                   </button>
                 ))}
               </div>
-              <p style={{ fontSize: '11px', color: 'var(--ink3)', margin: 0, flex: '1 0 100%' }}>※ クリップボードにコピー後、選択したAIツールを新しいタブで開きます。Cmd+V(Ctrl+V)で貼り付けてご利用ください。</p>
+              <p className="run-modal-settings-note">※ コピー後、AIツールを新タブで開きます。貼り付けてご利用ください。</p>
             </div>
           </div>
         )}
 
-        <div className={`modal-content-wrapper ${allPlaceholders.length > 0 ? 'has-form' : ''}`}>
-          {allPlaceholders.length > 0 && (
+        {/* ─── Mobile tab switcher (form有りの時のみ) ─── */}
+        {hasForm && (
+          <div className="mobile-tab-bar">
+            <button className={`mobile-tab ${mobileTab === 'preview' ? 'active' : ''}`} onClick={() => setMobileTab('preview')}>
+              プレビュー
+            </button>
+            <button className={`mobile-tab ${mobileTab === 'form' ? 'active' : ''}`} onClick={() => setMobileTab('form')}>
+              入力 ({allPlaceholders.length})
+            </button>
+          </div>
+        )}
+
+        {/* ─── Content area ─── */}
+        <div className={`modal-content-wrapper ${hasForm ? 'has-form' : ''} mobile-tab-${mobileTab}`}>
+          {hasForm && (
             <div className="prompt-form">
-              <div style={{ marginBottom: '20px', padding: '10px 12px', background: 'var(--primary-light)', borderRadius: '8px', borderLeft: '4px solid var(--primary)' }}>
-                <p style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: 'var(--primary)' }}>情報を入力してください。プレビューに反映されます。</p>
+              <div style={{ marginBottom: '16px', padding: '8px 10px', background: 'var(--primary-light)', borderRadius: '8px', borderLeft: '3px solid var(--primary)' }}>
+                <p style={{ margin: 0, fontSize: '11px', fontWeight: '600', color: 'var(--primary)' }}>情報を入力してください。プレビューに反映されます。</p>
               </div>
               {allPlaceholders.map(p => (
-                <div key={p} className="form-group" style={{ marginBottom: '16px' }}>
+                <div key={p} className="form-group" style={{ marginBottom: '14px' }}>
                   <label>{p}</label>
-                  <textarea className="prompt-textarea" placeholder={`ここに${p}を入力してください`} value={values[p] || ""} onChange={(e) => setValues(prev => ({ ...prev, [p]: e.target.value }))} />
+                  <textarea className="prompt-textarea" placeholder={`${p}を入力`} value={values[p] || ""} onChange={(e) => setValues(prev => ({ ...prev, [p]: e.target.value }))} />
                 </div>
               ))}
             </div>
           )}
           <div className="prompt-preview">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexShrink: 0 }}>
-              <h3 style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink2)', margin: 0 }}>プロンプト プレビュー</h3>
-              <span style={{ fontSize: '10px', color: 'var(--ink3)' }}>編集可能 - 自由に修正できます</span>
+            <div className="preview-header">
+              <h3 style={{ fontSize: '12px', fontWeight: '700', color: 'var(--ink2)', margin: 0 }}>プロンプト プレビュー</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '10px', color: 'var(--ink3)' }}>編集可能</span>
+                <button
+                  className="preview-maximize-btn"
+                  onClick={() => setIsMaximized(!isMaximized)}
+                  title={isMaximized ? "元に戻す" : "全画面プレビュー"}
+                >
+                  {isMaximized ? '⊟' : '⊞'}
+                </button>
+              </div>
             </div>
             <textarea
               className="preview-box editable"
@@ -267,14 +328,15 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool, useQ
             />
           </div>
         </div>
-        <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: '12px', backgroundColor: 'var(--card)', zIndex: 10, flexShrink: 0, flexWrap: 'wrap' }}>
-          <button className="btn-action btn-outline" onClick={onClose} style={{ flex: '0 0 auto', width: 'auto', padding: '0 20px' }}>キャンセル</button>
-          <div style={{ flex: 1 }} className="desktop-spacer" />
-          <button className="btn-action btn-outline" onClick={handleAiPaste} style={{ flex: '1 1 200px', fontSize: '15px', fontWeight: '700', height: '48px', borderRadius: '10px', borderColor: 'var(--primary)', color: 'var(--primary)' }}>
-            {pasteStatus ? "貼り付け先に移動中..." : <><Icons.Sparkles /> AI Tool貼付</>}
+
+        {/* ─── Footer (compact on mobile) ─── */}
+        <div className="run-modal-footer">
+          <button className="btn-action btn-outline run-modal-cancel" onClick={onClose}>閉じる</button>
+          <button className="btn-action btn-outline run-modal-ai-btn" onClick={handleAiPaste}>
+            {pasteStatus ? "移動中..." : <><Icons.Sparkles /> AI貼付</>}
           </button>
-          <button className="btn-action btn-primary" onClick={handleCopy} style={{ flex: '1 1 200px', fontSize: '15px', fontWeight: '700', height: '48px', borderRadius: '10px' }}>
-            {copyStatus ? "コピーしました！" : <><Icons.Copy /> 完成させてコピー</>}
+          <button className="btn-action btn-primary run-modal-copy-btn" onClick={handleCopy}>
+            {copyStatus ? "Copied!" : <><Icons.Copy /> コピー</>}
           </button>
         </div>
       </div>
