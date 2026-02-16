@@ -7,11 +7,12 @@ import contentsData from "./data/contents.json";
 // ─── Constants & Helpers ───────────────────────────────────────────────────
 const STORAGE_KEY = "nanyo_prompts_v5";
 const PER_PAGE = 32;
+const MAX_QUERY_LENGTH = 2000; // URLクエリの安全な上限文字数
 
 const AI_TOOLS = [
-  { id: 'chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com/', query: '?q=' },
-  { id: 'gemini', name: 'Gemini', url: 'https://gemini.google.com/app', query: '?q=' },
-  { id: 'claude', name: 'Claude', url: 'https://claude.ai/', query: '' },
+  { id: 'chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com/', query: '' },
+  { id: 'gemini', name: 'Gemini', url: 'https://gemini.google.com/app', query: '' },
+  { id: 'claude', name: 'Claude', url: 'https://claude.ai/new', query: '' },
   { id: 'qwen', name: 'Qwen', url: 'https://chat.qwenlm.ai/', query: '' },
 ];
 
@@ -47,7 +48,7 @@ const Icons = {
 };
 
 // ─── Modal: PromptRunModal ──────────────────────────────────────────────────
-const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) => {
+const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool, useQuery, setUseQuery }) => {
   const [showSettings, setShowSettings] = useState(false);
   // コンテンツ解析: 本文抽出、セクション変数抽出、UI混入テキスト除去
   const { promptText, inlinePlaceholders, additionalVars, allPlaceholders } = useMemo(() => {
@@ -183,9 +184,9 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
     handleCopy();
     const tool = AI_TOOLS.find(t => t.id === selectedAiTool) || AI_TOOLS[0];
     let url = tool.url;
-    if (tool.query) {
-      url += tool.query + encodeURIComponent(finalPromptText);
-    }
+    
+    // 全てのAIツールでクリップボード貼り付けを想定（URLクエリは使用しない）
+    
     window.open(url, '_blank');
     setPasteStatus(true);
     setTimeout(() => setPasteStatus(false), 2000);
@@ -217,7 +218,7 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
               <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink2)' }}>貼り付け先AIツール:</span>
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {AI_TOOLS.map(tool => (
-                  <button 
+                  <button
                     key={tool.id}
                     onClick={() => setSelectedAiTool(tool.id)}
                     className={`chip ${selectedAiTool === tool.id ? 'active' : ''}`}
@@ -227,7 +228,7 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
                   </button>
                 ))}
               </div>
-              <p style={{ fontSize: '11px', color: 'var(--ink3)', margin: 0, flex: '1 0 100%' }}>※ 一部のツールではURLから直接プロンプトを入力できない場合があります。その際は手動で貼り付けてください。</p>
+              <p style={{ fontSize: '11px', color: 'var(--ink3)', margin: 0, flex: '1 0 100%' }}>※ クリップボードにコピー後、選択したAIツールを新しいタブで開きます。Cmd+V(Ctrl+V)で貼り付けてご利用ください。</p>
             </div>
           </div>
         )}
@@ -489,6 +490,8 @@ export default function App() {
           onClose={()=>setRunModal(null)} 
           selectedAiTool={selectedAiTool}
           setSelectedAiTool={setSelectedAiTool}
+          useQuery={useQuery}
+          setUseQuery={setUseQuery}
         />
       )}
     </div>
