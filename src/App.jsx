@@ -437,6 +437,7 @@ export default function App() {
   const [selectedAiTool, setSelectedAiTool] = useState(AI_TOOLS[0].id);
   const [useQuery, setUseQuery] = useState(true);
   const searchRef = useRef(null);
+  const isComposingRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -473,8 +474,9 @@ export default function App() {
     }
   }, [prompts, favs, isLoaded, selectedAiTool, useQuery]);
 
-  // ─── 検索デバウンス: 日本語IME入力完了を待つ ───
+  // ─── 検索デバウンス: 日本語IME変換確定を待つ ───
   useEffect(() => {
+    if (isComposingRef.current) return;
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(timer);
   }, [query]);
@@ -536,7 +538,11 @@ export default function App() {
       <div className="search-container">
         <div className="search-box">
           <span className="search-icon"><Icons.Search /></span>
-          <input ref={searchRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="キーワード、ID、カテゴリで検索..." />
+          <input ref={searchRef} value={query}
+            onChange={e => setQuery(e.target.value)}
+            onCompositionStart={() => { isComposingRef.current = true; }}
+            onCompositionEnd={e => { isComposingRef.current = false; setQuery(e.target.value); }}
+            placeholder="キーワード、ID、カテゴリで検索..." />
           {query && <button className="search-clear" onClick={()=>{setQuery("");searchRef.current?.focus()}}>×</button>}
         </div>
         <div className="search-modes">
