@@ -268,12 +268,7 @@ const scorePrompt = (prompt, tokens, mode, contentText = "") => {
       keywordScore += tokenScore;
     });
 
-    // keyword モード: 複数トークン時は厳密AND（全トークンが一致必須）
-    if (mode === "keyword" && tokens.length > 1 && keywordMatched < tokens.length) {
-      keywordScore = 0;
-    }
-
-    // AND条件ボーナス（smartモード、または全トークンマッチ時）
+    // AND条件ボーナス: 全トークンがマッチした場合にボーナス
     if (keywordMatched === tokens.length && tokens.length > 1) {
       keywordScore *= 1.5;
     }
@@ -284,18 +279,20 @@ const scorePrompt = (prompt, tokens, mode, contentText = "") => {
     }
   }
 
-  // --- 意図検索 (メタデータ + 本文を対象に、同義語展開 + 逆引き展開) ---
+  // --- 意図検索 (同義語展開 + 本文は元トークンのみ検索) ---
   if (mode === "intent" || mode === "smart") {
     const expandedTokens = expandIntent(tokens);
     let intentScore = 0;
 
     expandedTokens.forEach((eToken) => {
       // smart モードでは元のトークンは既にキーワードスコアでカウント済みなのでスキップ
-      // intent モードでは元のトークンも意図スコアとしてカウントする
       if (mode === "smart" && tokens.includes(eToken)) return;
 
-      // intent/smart: 全フィールド（メタデータ + 本文）を検索
-      Object.entries(allFields).forEach(([field, value]) => {
+      const isOriginalToken = tokens.includes(eToken);
+      // 展開語はメタデータのみ検索、元のトークンはメタデータ+本文を検索
+      const searchFields = isOriginalToken ? allFields : metaFields;
+
+      Object.entries(searchFields).forEach(([field, value]) => {
         if (!value) return;
         const weight = FIELD_WEIGHTS[field] || 1;
 
@@ -407,10 +404,10 @@ export const searchPrompts = (prompts, query, mode = "smart", contentsData = {})
  * 検索モードのラベル
  */
 export const SEARCH_MODES = {
-  smart: { label: "スマート", description: "キーワード + 意図 + 曖昧" },
-  keyword: { label: "キーワード", description: "完全・部分一致" },
-  intent: { label: "意図検索", description: "関連語を自動展開" },
-  fuzzy: { label: "あいまい", description: "類似文字列マッチ" },
+  smart: { label: "スマート", description: "全手法を総合的に組み合わせ" },
+  keyword: { label: "キーワード", description: "タイトル・カテゴリの完全/部分一致" },
+  intent: { label: "意図検索", description: "関連語展開 + 本文検索" },
+  fuzzy: { label: "あいまい", description: "表記ゆれ・タイポに対応" },
 };
 
 export { normalize, expandIntent, INTENT_MAP };
