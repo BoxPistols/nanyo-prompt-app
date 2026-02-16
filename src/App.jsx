@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import "./App.css";
 import { RAW, INITIAL_PROMPTS } from "./data/prompts";
 import contentsData from "./data/contents.json";
+import { searchPrompts, SEARCH_MODES } from "./utils/search";
 
 // ─── Constants & Helpers ───────────────────────────────────────────────────
 const STORAGE_KEY = "nanyo_prompts_v5";
@@ -336,6 +337,7 @@ export default function App() {
   const [prompts, setPrompts] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState("smart");
   const [activeC1, setActiveC1] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [showFav, setShowFav] = useState(false);
@@ -388,18 +390,30 @@ export default function App() {
   const filtered = useMemo(() => {
     let list = prompts;
     if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(p => p.title.toLowerCase().includes(q) || String(p.id).includes(q) || p.c1.toLowerCase().includes(q));
+      list = searchPrompts(list, query, searchMode);
     }
     if (activeC1) list = list.filter(p => p.c1 === activeC1);
     if (showNew) list = list.filter(p => p.isNew);
     if (showFav) list = list.filter(p => favs.has(p.id));
     return list;
-  }, [prompts, query, activeC1, showNew, showFav, favs]);
+  }, [prompts, query, searchMode, activeC1, showNew, showFav, favs]);
+
+  // 検索結果のマッチタイプ集計
+  const matchTypeSummary = useMemo(() => {
+    if (!query) return null;
+    const types = { keyword: 0, intent: 0, fuzzy: 0 };
+    filtered.forEach(p => {
+      const mt = p._matchType || "";
+      if (mt.includes("keyword")) types.keyword++;
+      if (mt.includes("intent")) types.intent++;
+      if (mt.includes("fuzzy")) types.fuzzy++;
+    });
+    return types;
+  }, [filtered, query]);
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paged = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
-  useEffect(() => setPage(0), [query, activeC1, showNew, showFav]);
+  useEffect(() => setPage(0), [query, searchMode, activeC1, showNew, showFav]);
 
   const toggleFav = (id) => { setFavs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); };
   const handleSave = (form) => {
@@ -433,6 +447,28 @@ export default function App() {
           <input ref={searchRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="キーワード、ID、カテゴリで検索..." />
           {query && <button className="search-clear" onClick={()=>{setQuery("");searchRef.current?.focus()}}>×</button>}
         </div>
+        <div className="search-modes">
+          {Object.entries(SEARCH_MODES).map(([key, { label }]) => (
+            <button key={key} className={`search-mode-btn ${searchMode === key ? 'active' : ''}`} onClick={() => setSearchMode(key)} title={SEARCH_MODES[key].description}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {query && filtered.length > 0 && matchTypeSummary && (
+          <div className="search-info">
+            <span className="search-result-count">{filtered.length}件</span>
+            <span className="search-match-types">
+              {matchTypeSummary.keyword > 0 && <span className="match-badge match-keyword">キーワード {matchTypeSummary.keyword}</span>}
+              {matchTypeSummary.intent > 0 && <span className="match-badge match-intent">意図 {matchTypeSummary.intent}</span>}
+              {matchTypeSummary.fuzzy > 0 && <span className="match-badge match-fuzzy">あいまい {matchTypeSummary.fuzzy}</span>}
+            </span>
+          </div>
+        )}
+        {query && filtered.length === 0 && (
+          <div className="search-info">
+            <span className="search-result-count search-no-result">0件 - 検索条件を変えてお試しください</span>
+          </div>
+        )}
       </div>
       <div className="filters">
         <button className={`chip ${!activeC1 && !showNew && !showFav ? 'active' : ''}`} onClick={()=>{setActiveC1("");setShowNew(false);setShowFav(false)}}>

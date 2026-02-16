@@ -185,6 +185,102 @@ body.dark .header { background: rgba(36, 34, 32, 0.82); }
 }
 .search-clear:hover { background: var(--ink3); color: var(--card); }
 
+/* ─── Search Modes ──────────────────────────────────────────────────────── */
+.search-modes {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.search-mode-btn {
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-en), var(--font-ja);
+}
+.search-mode-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+.search-mode-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.25);
+}
+body.dark .search-mode-btn.active {
+  box-shadow: 0 1px 4px rgba(165, 180, 252, 0.2);
+}
+
+/* ─── Search Info ───────────────────────────────────────────────────────── */
+.search-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.search-result-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink2);
+}
+
+.search-no-result {
+  color: var(--ink3);
+}
+
+.search-match-types {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.match-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.match-keyword {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+body.dark .match-keyword {
+  background: rgba(29, 78, 216, 0.2);
+  color: #93bbfd;
+}
+
+.match-intent {
+  background: #fef3c7;
+  color: #b45309;
+}
+body.dark .match-intent {
+  background: rgba(180, 83, 9, 0.2);
+  color: #fcd34d;
+}
+
+.match-fuzzy {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+body.dark .match-fuzzy {
+  background: rgba(109, 40, 217, 0.2);
+  color: #c4b5fd;
+}
+
 /* ─── Filter Chips ───────────────────────────────────────────────────────── */
 .filters { padding: 14px 24px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 
