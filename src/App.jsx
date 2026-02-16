@@ -541,7 +541,7 @@ export default function App() {
           <input ref={searchRef} value={query}
             onChange={e => setQuery(e.target.value)}
             onCompositionStart={() => { isComposingRef.current = true; }}
-            onCompositionEnd={e => { isComposingRef.current = false; setQuery(e.target.value); }}
+            onCompositionEnd={e => { isComposingRef.current = false; setQuery(e.target.value); setDebouncedQuery(e.target.value); }}
             placeholder="キーワード、ID、カテゴリで検索..." />
           {query && <button className="search-clear" onClick={()=>{setQuery("");searchRef.current?.focus()}}>×</button>}
         </div>
