@@ -204,34 +204,37 @@ const scorePrompt = (prompt, tokens, mode) => {
   };
 
   // --- キーワード検索 (完全一致・部分一致) ---
-  let keywordScore = 0;
-  let keywordMatched = 0;
+  // keyword / smart モードのみ実行
+  if (mode === "keyword" || mode === "smart") {
+    let keywordScore = 0;
+    let keywordMatched = 0;
 
-  tokens.forEach((token) => {
-    let tokenScore = 0;
-    Object.entries(fields).forEach(([field, value]) => {
-      if (!value) return;
-      const weight = FIELD_WEIGHTS[field] || 1;
-      if (value === token) {
-        // 完全一致
-        tokenScore += weight * 3;
-      } else if (value.includes(token)) {
-        // 部分一致
-        tokenScore += weight * 2;
-      }
+    tokens.forEach((token) => {
+      let tokenScore = 0;
+      Object.entries(fields).forEach(([field, value]) => {
+        if (!value) return;
+        const weight = FIELD_WEIGHTS[field] || 1;
+        if (value === token) {
+          // 完全一致
+          tokenScore += weight * 3;
+        } else if (value.includes(token)) {
+          // 部分一致
+          tokenScore += weight * 2;
+        }
+      });
+      if (tokenScore > 0) keywordMatched++;
+      keywordScore += tokenScore;
     });
-    if (tokenScore > 0) keywordMatched++;
-    keywordScore += tokenScore;
-  });
 
-  // AND条件: 全トークンがマッチした場合にボーナス
-  if (keywordMatched === tokens.length && tokens.length > 1) {
-    keywordScore *= 1.5;
-  }
+    // AND条件: 全トークンがマッチした場合にボーナス
+    if (keywordMatched === tokens.length && tokens.length > 1) {
+      keywordScore *= 1.5;
+    }
 
-  if (keywordScore > 0) {
-    totalScore += keywordScore;
-    matchType = "keyword";
+    if (keywordScore > 0) {
+      totalScore += keywordScore;
+      matchType = "keyword";
+    }
   }
 
   // --- 意図検索 (mode が intent または smart) ---
@@ -240,13 +243,26 @@ const scorePrompt = (prompt, tokens, mode) => {
     let intentScore = 0;
 
     expandedTokens.forEach((eToken) => {
-      // 元のトークンと同じなら既にカウント済みなのでスキップ
-      if (tokens.includes(eToken)) return;
+      // smart モードでは元のトークンは既にキーワードスコアでカウント済みなのでスキップ
+      // intent モードでは元のトークンも意図スコアとしてカウントする
+      if (mode === "smart" && tokens.includes(eToken)) return;
+
       Object.entries(fields).forEach(([field, value]) => {
         if (!value) return;
         const weight = FIELD_WEIGHTS[field] || 1;
-        if (value.includes(eToken)) {
-          intentScore += weight * 0.8; // 意図展開は少し低めのスコア
+
+        if (mode === "intent") {
+          // intent モード: 元のキーワードと同等の重みでスコアリング
+          if (value === eToken) {
+            intentScore += weight * 3;
+          } else if (value.includes(eToken)) {
+            intentScore += weight * 2;
+          }
+        } else {
+          // smart モード: 補助的スコア
+          if (value.includes(eToken)) {
+            intentScore += weight * 0.8;
+          }
         }
       });
     });
@@ -254,13 +270,17 @@ const scorePrompt = (prompt, tokens, mode) => {
     if (intentScore > 0 && totalScore === 0) {
       matchType = "intent";
     } else if (intentScore > 0) {
-      matchType = "keyword+intent";
+      matchType = matchType ? matchType + "+intent" : "intent";
     }
     totalScore += intentScore;
   }
 
   // --- 曖昧検索 (mode が fuzzy または smart) ---
   if (mode === "fuzzy" || mode === "smart") {
+    // fuzzy 単独モード: 高めの重み・低めの閾値で広く拾う
+    // smart モード: 補助的スコア
+    const fuzzyThreshold = mode === "fuzzy" ? 0.3 : 0.5;
+    const fuzzyMultiplier = mode === "fuzzy" ? 1.5 : 0.6;
     let fuzzyScore = 0;
 
     tokens.forEach((token) => {
@@ -269,9 +289,9 @@ const scorePrompt = (prompt, tokens, mode) => {
         if (!value) return;
         const weight = FIELD_WEIGHTS[field] || 1;
         const sim = partialBigramSimilarity(token, value);
-        if (sim >= 0.5) {
-          // 閾値0.5以上で曖昧マッチ
-          fuzzyScore += weight * sim * 0.6; // 曖昧一致は低めのスコア
+        if (sim >= fuzzyThreshold) {
+          // 曖昧一致
+          fuzzyScore += weight * sim * fuzzyMultiplier;
         }
       });
     });
