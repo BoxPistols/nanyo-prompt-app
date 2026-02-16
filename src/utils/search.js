@@ -141,7 +141,18 @@ const expandIntent = (queryTokens) => {
     // 正引き: トークンがINTENT_MAPのキーにマッチ
     Object.entries(INTENT_MAP).forEach(([key, synonyms]) => {
       const normKey = normalize(key);
+      // キーとマッチする場合
       if (normToken.includes(normKey) || normKey.includes(normToken)) {
+        synonyms.forEach((s) => expanded.add(normalize(s)));
+      }
+      // シノニムとマッチする場合 (逆引き)
+      const isSynonymMatched = synonyms.some((s) => {
+        const normS = normalize(s);
+        return normToken.includes(normS) || normS.includes(normToken);
+      });
+      if (isSynonymMatched) {
+        expanded.add(normKey);
+        // 兄弟シノニムも追加
         synonyms.forEach((s) => expanded.add(normalize(s)));
       }
     });
