@@ -452,7 +452,7 @@ export default function App() {
   const filtered = useMemo(() => {
     let list = prompts;
     if (query) {
-      list = searchPrompts(list, query, searchMode);
+      list = searchPrompts(list, query, searchMode, contentsData);
     }
     if (activeC1) list = list.filter(p => p.c1 === activeC1);
     if (showNew) list = list.filter(p => p.isNew);

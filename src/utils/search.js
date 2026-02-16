@@ -1,8 +1,9 @@
 /**
  * キーワード検索ロジック
- * - キーワード検索: 複数キーワードAND検索、全フィールド対象
- * - 意図検索: 同義語・関連語展開による意図理解
+ * - キーワード検索: 複数キーワード厳密AND検索、メタデータフィールド対象
+ * - 意図検索: 同義語・関連語展開 + プロンプト本文検索による意図理解
  * - 曖昧検索: N-gram類似度 + カタカナ/ひらがな正規化
+ * - スマート検索: 全手法を組み合わせた総合検索
  */
 
 // ─── テキスト正規化 ──────────────────────────────────────────────────────────
@@ -72,10 +73,19 @@ const INTENT_MAP = {
   "挨拶": ["スピーチ", "メッセージ", "挨拶文", "祝辞"],
   "スピーチ": ["挨拶", "メッセージ", "スピーチ関連", "発表"],
 
-  // 広報系
+  // 広報・マーケティング系
   "広報": ["広報", "PR", "プレスリリース", "SNS", "メルマガ", "情報発信"],
   "SNS": ["メルマガ", "広報", "PR", "ソーシャル", "情報発信", "コンテンツ"],
   "宣伝": ["広報", "PR", "マーケティング", "キャッチコピー", "プロモーション"],
+  "キャッチコピー": ["コピーライティング", "広告", "宣伝", "マーケティング", "LP", "ランディングページ", "キャッチフレーズ"],
+  "LP": ["ランディングページ", "Web", "マーケティング", "広告", "コンバージョン", "キャッチコピー"],
+  "マーケティング": ["広告", "宣伝", "SEO", "Web", "コンテンツ", "集客", "プロモーション"],
+  "SEO": ["検索エンジン", "Web", "マーケティング", "コンテンツ", "集客", "アクセス"],
+  "Web": ["ホームページ", "サイト", "SEO", "LP", "ランディングページ", "コンテンツ"],
+  "広告": ["宣伝", "マーケティング", "キャッチコピー", "PR", "プロモーション", "コピーライティング"],
+  "戦略": ["企画", "計画", "マーケティング", "分析", "立案", "プランニング"],
+  "コンテンツ": ["記事", "ブログ", "Web", "SNS", "情報発信", "ライティング"],
+  "ブログ": ["記事", "コンテンツ", "Web", "ライティング", "情報発信"],
 
   // プログラミング系
   "プログラム": ["プログラミング", "コード", "マクロ", "Excel", "開発"],
@@ -104,17 +114,42 @@ const INTENT_MAP = {
   "添削": ["校正", "修正", "編集", "改善", "チェック"],
 };
 
+/** 逆引きマップを自動生成: 値→キーの関連付け */
+const REVERSE_INTENT_MAP = (() => {
+  const reverse = {};
+  Object.entries(INTENT_MAP).forEach(([key, synonyms]) => {
+    synonyms.forEach((syn) => {
+      const normSyn = normalize(syn);
+      if (!reverse[normSyn]) reverse[normSyn] = new Set();
+      reverse[normSyn].add(normalize(key));
+      // 同じグループの他の同義語も追加
+      synonyms.forEach((s2) => {
+        if (s2 !== syn) reverse[normSyn].add(normalize(s2));
+      });
+    });
+  });
+  return reverse;
+})();
+
 /** クエリから意図を展開し、関連語を含む拡張キーワードセットを返す */
 const expandIntent = (queryTokens) => {
   const expanded = new Set();
   queryTokens.forEach((token) => {
     expanded.add(token);
-    // 正規化前のトークンでも検索
     const normToken = normalize(token);
+
+    // 正引き: トークンがINTENT_MAPのキーにマッチ
     Object.entries(INTENT_MAP).forEach(([key, synonyms]) => {
       const normKey = normalize(key);
       if (normToken.includes(normKey) || normKey.includes(normToken)) {
         synonyms.forEach((s) => expanded.add(normalize(s)));
+      }
+    });
+
+    // 逆引き: トークンがINTENT_MAPの値側にマッチ → キーと同グループの語を展開
+    Object.entries(REVERSE_INTENT_MAP).forEach(([normSyn, relatedSet]) => {
+      if (normToken.includes(normSyn) || normSyn.includes(normToken)) {
+        relatedSet.forEach((r) => expanded.add(r));
       }
     });
   });
@@ -180,6 +215,7 @@ const FIELD_WEIGHTS = {
   sub: 2,
   tag: 2,
   id: 1,
+  content: 1, // プロンプト本文（意図/スマートモードのみ使用）
 };
 
 /**
@@ -187,13 +223,15 @@ const FIELD_WEIGHTS = {
  * @param {Object} prompt - プロンプトオブジェクト
  * @param {string[]} tokens - 検索トークン (正規化済み)
  * @param {string} mode - "keyword" | "intent" | "fuzzy" | "smart"
+ * @param {string} contentText - プロンプト本文テキスト
  * @returns {{ score: number, matchType: string }} スコアとマッチタイプ
  */
-const scorePrompt = (prompt, tokens, mode) => {
+const scorePrompt = (prompt, tokens, mode, contentText = "") => {
   let totalScore = 0;
   let matchType = "";
 
-  const fields = {
+  // メタデータフィールド（keyword/fuzzyモードで使用）
+  const metaFields = {
     title: normalize(prompt.title),
     c1: normalize(prompt.c1),
     c2: normalize(prompt.c2 || ""),
@@ -203,7 +241,13 @@ const scorePrompt = (prompt, tokens, mode) => {
     id: String(prompt.id),
   };
 
-  // --- キーワード検索 (完全一致・部分一致) ---
+  // 全フィールド（intent/smartモードで使用: メタデータ + 本文）
+  const allFields = { ...metaFields };
+  if (contentText) {
+    allFields.content = normalize(contentText);
+  }
+
+  // --- キーワード検索 (完全一致・部分一致、メタデータのみ) ---
   // keyword / smart モードのみ実行
   if (mode === "keyword" || mode === "smart") {
     let keywordScore = 0;
@@ -211,14 +255,12 @@ const scorePrompt = (prompt, tokens, mode) => {
 
     tokens.forEach((token) => {
       let tokenScore = 0;
-      Object.entries(fields).forEach(([field, value]) => {
+      Object.entries(metaFields).forEach(([field, value]) => {
         if (!value) return;
         const weight = FIELD_WEIGHTS[field] || 1;
         if (value === token) {
-          // 完全一致
           tokenScore += weight * 3;
         } else if (value.includes(token)) {
-          // 部分一致
           tokenScore += weight * 2;
         }
       });
@@ -226,7 +268,12 @@ const scorePrompt = (prompt, tokens, mode) => {
       keywordScore += tokenScore;
     });
 
-    // AND条件: 全トークンがマッチした場合にボーナス
+    // keyword モード: 複数トークン時は厳密AND（全トークンが一致必須）
+    if (mode === "keyword" && tokens.length > 1 && keywordMatched < tokens.length) {
+      keywordScore = 0;
+    }
+
+    // AND条件ボーナス（smartモード、または全トークンマッチ時）
     if (keywordMatched === tokens.length && tokens.length > 1) {
       keywordScore *= 1.5;
     }
@@ -237,7 +284,7 @@ const scorePrompt = (prompt, tokens, mode) => {
     }
   }
 
-  // --- 意図検索 (mode が intent または smart) ---
+  // --- 意図検索 (メタデータ + 本文を対象に、同義語展開 + 逆引き展開) ---
   if (mode === "intent" || mode === "smart") {
     const expandedTokens = expandIntent(tokens);
     let intentScore = 0;
@@ -247,12 +294,12 @@ const scorePrompt = (prompt, tokens, mode) => {
       // intent モードでは元のトークンも意図スコアとしてカウントする
       if (mode === "smart" && tokens.includes(eToken)) return;
 
-      Object.entries(fields).forEach(([field, value]) => {
+      // intent/smart: 全フィールド（メタデータ + 本文）を検索
+      Object.entries(allFields).forEach(([field, value]) => {
         if (!value) return;
         const weight = FIELD_WEIGHTS[field] || 1;
 
         if (mode === "intent") {
-          // intent モード: 元のキーワードと同等の重みでスコアリング
           if (value === eToken) {
             intentScore += weight * 3;
           } else if (value.includes(eToken)) {
@@ -275,22 +322,19 @@ const scorePrompt = (prompt, tokens, mode) => {
     totalScore += intentScore;
   }
 
-  // --- 曖昧検索 (mode が fuzzy または smart) ---
+  // --- 曖昧検索 (メタデータのみ対象) ---
   if (mode === "fuzzy" || mode === "smart") {
-    // fuzzy 単独モード: 高めの重み・低めの閾値で広く拾う
-    // smart モード: 補助的スコア
     const fuzzyThreshold = mode === "fuzzy" ? 0.3 : 0.5;
     const fuzzyMultiplier = mode === "fuzzy" ? 1.5 : 0.6;
     let fuzzyScore = 0;
 
     tokens.forEach((token) => {
-      if (token.length < 2) return; // 1文字は曖昧検索しない
-      Object.entries(fields).forEach(([field, value]) => {
+      if (token.length < 2) return;
+      Object.entries(metaFields).forEach(([field, value]) => {
         if (!value) return;
         const weight = FIELD_WEIGHTS[field] || 1;
         const sim = partialBigramSimilarity(token, value);
         if (sim >= fuzzyThreshold) {
-          // 曖昧一致
           fuzzyScore += weight * sim * fuzzyMultiplier;
         }
       });
@@ -310,21 +354,22 @@ const scorePrompt = (prompt, tokens, mode) => {
 // ─── メイン検索関数 ──────────────────────────────────────────────────────────
 
 /**
- * 検索モード
- * - "keyword": キーワード完全/部分一致のみ
- * - "intent": キーワード + 意図展開
- * - "fuzzy": キーワード + 曖昧検索
- * - "smart": すべてを組み合わせたスマート検索 (デフォルト)
+ * 検索モード別の動作:
+ * - "keyword": メタデータのみ、厳密AND一致（最も絞り込み）
+ * - "intent": メタデータ+本文、同義語展開+逆引き展開（広範囲検索）
+ * - "fuzzy": メタデータのみ、N-gram類似度（表記ゆれ対応）
+ * - "smart": 全手法を組み合わせた総合検索（デフォルト）
  */
 
 /**
  * プロンプトリストを検索してスコア付き結果を返す
  * @param {Array} prompts - プロンプト配列
  * @param {string} query - 検索クエリ
- * @param {string} mode - 検索モード ("keyword" | "intent" | "fuzzy" | "smart")
- * @returns {Array} スコア順にソートされた結果 [{ ...prompt, _searchScore, _matchType }]
+ * @param {string} mode - 検索モード
+ * @param {Object} contentsData - プロンプト本文データ { id: contentString }
+ * @returns {Array} スコア順にソートされた結果
  */
-export const searchPrompts = (prompts, query, mode = "smart") => {
+export const searchPrompts = (prompts, query, mode = "smart", contentsData = {}) => {
   if (!query || !query.trim()) return prompts;
 
   const rawQuery = query.trim();
@@ -341,7 +386,8 @@ export const searchPrompts = (prompts, query, mode = "smart") => {
   const results = [];
 
   prompts.forEach((prompt) => {
-    const { score, matchType } = scorePrompt(prompt, tokens, mode);
+    const contentText = contentsData[prompt.id] || "";
+    const { score, matchType } = scorePrompt(prompt, tokens, mode, contentText);
     if (score > 0) {
       results.push({
         ...prompt,
