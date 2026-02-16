@@ -8,6 +8,13 @@ import contentsData from "./data/contents.json";
 const STORAGE_KEY = "nanyo_prompts_v5";
 const PER_PAGE = 32;
 
+const AI_TOOLS = [
+  { id: 'chatgpt', name: 'ChatGPT', url: 'https://chatgpt.com/', query: '?q=' },
+  { id: 'gemini', name: 'Gemini', url: 'https://gemini.google.com/app', query: '?q=' },
+  { id: 'claude', name: 'Claude', url: 'https://claude.ai/', query: '' },
+  { id: 'qwen', name: 'Qwen', url: 'https://chat.qwenlm.ai/', query: '' },
+];
+
 const CAT_COLORS = {
   "文章作成・要約": { bg: "#e0f2fe", fg: "#0369a1", darkBg: "rgba(3, 105, 161, 0.2)", darkFg: "#7dd3fc", icon: "✏️" },
   "文書校正・編集": { bg: "#fce7f3", fg: "#be185d", darkBg: "rgba(190, 24, 93, 0.2)", darkFg: "#f9a8d4", icon: "📝" },
@@ -34,11 +41,14 @@ const Icons = {
   External: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
   Copy: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
   Ai: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-  Trash: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+  Trash: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+  Settings: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  Sparkles: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.91 5.81L21 12l-7.09 3.19L12 21l-1.91-5.81L3 12l7.09-3.19L12 3z"/></svg>
 };
 
 // ─── Modal: PromptRunModal ──────────────────────────────────────────────────
-const PromptRunModal = ({ item, onClose }) => {
+const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) => {
+  const [showSettings, setShowSettings] = useState(false);
   // コンテンツ解析: 本文抽出、セクション変数抽出、UI混入テキスト除去
   const { promptText, inlinePlaceholders, additionalVars, allPlaceholders } = useMemo(() => {
     let content = (contentsData[item.id] || "プロンプトの本文が読み込めませんでした。")
@@ -82,6 +92,7 @@ const PromptRunModal = ({ item, onClose }) => {
   });
 
   const [copyStatus, setCopyStatus] = useState(false);
+  const [pasteStatus, setPasteStatus] = useState(false);
 
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
@@ -168,6 +179,18 @@ const PromptRunModal = ({ item, onClose }) => {
     document.body.removeChild(textArea);
   };
 
+  const handleAiPaste = () => {
+    handleCopy();
+    const tool = AI_TOOLS.find(t => t.id === selectedAiTool) || AI_TOOLS[0];
+    let url = tool.url;
+    if (tool.query) {
+      url += tool.query + encodeURIComponent(finalPromptText);
+    }
+    window.open(url, '_blank');
+    setPasteStatus(true);
+    setTimeout(() => setPasteStatus(false), 2000);
+  };
+
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={{ maxWidth: '1100px', height: '90vh' }} onClick={(e) => e.stopPropagation()}>
@@ -176,8 +199,39 @@ const PromptRunModal = ({ item, onClose }) => {
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</h2>
             <p style={{ fontSize: '11px', color: 'var(--ink3)', margin: '4px 0 0' }}>#{item.id} - {item.c1} / {item.c2}</p>
           </div>
-          <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: '24px', cursor: 'pointer', color: 'var(--ink2)', marginLeft: '12px', padding: '4px' }}>×</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button 
+              onClick={() => setShowSettings(!showSettings)} 
+              style={{ border: 'none', background: showSettings ? 'var(--primary-light)' : 'transparent', borderRadius: '6px', cursor: 'pointer', color: showSettings ? 'var(--primary)' : 'var(--ink3)', padding: '6px', display: 'flex' }}
+              title="AIツールの設定"
+            >
+              <Icons.Settings />
+            </button>
+            <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: '24px', cursor: 'pointer', color: 'var(--ink2)', padding: '4px' }}>×</button>
+          </div>
         </div>
+        
+        {showSettings && (
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg)', animation: 'modal-in 0.2s ease-out' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink2)' }}>貼り付け先AIツール:</span>
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {AI_TOOLS.map(tool => (
+                  <button 
+                    key={tool.id}
+                    onClick={() => setSelectedAiTool(tool.id)}
+                    className={`chip ${selectedAiTool === tool.id ? 'active' : ''}`}
+                    style={{ padding: '4px 12px' }}
+                  >
+                    {tool.name}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--ink3)', margin: 0, flex: '1 0 100%' }}>※ 一部のツールではURLから直接プロンプトを入力できない場合があります。その際は手動で貼り付けてください。</p>
+            </div>
+          </div>
+        )}
+
         <div className={`modal-content-wrapper ${allPlaceholders.length > 0 ? 'has-form' : ''}`}>
           {allPlaceholders.length > 0 && (
             <div className="prompt-form">
@@ -203,7 +257,10 @@ const PromptRunModal = ({ item, onClose }) => {
         <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: '12px', backgroundColor: 'var(--card)', zIndex: 10, flexShrink: 0, flexWrap: 'wrap' }}>
           <button className="btn-action btn-outline" onClick={onClose} style={{ flex: '0 0 auto', width: 'auto', padding: '0 20px' }}>キャンセル</button>
           <div style={{ flex: 1 }} className="desktop-spacer" />
-          <button className="btn-action btn-primary" onClick={handleCopy} style={{ flex: '1 1 300px', fontSize: '15px', fontWeight: '700', height: '48px', borderRadius: '10px' }}>
+          <button className="btn-action btn-outline" onClick={handleAiPaste} style={{ flex: '1 1 200px', fontSize: '15px', fontWeight: '700', height: '48px', borderRadius: '10px', borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+            {pasteStatus ? "貼り付け先に移動中..." : <><Icons.Sparkles /> AI Tool貼付</>}
+          </button>
+          <button className="btn-action btn-primary" onClick={handleCopy} style={{ flex: '1 1 200px', fontSize: '15px', fontWeight: '700', height: '48px', borderRadius: '10px' }}>
             {copyStatus ? "コピーしました！" : <><Icons.Copy /> 完成させてコピー</>}
           </button>
         </div>
@@ -277,6 +334,8 @@ export default function App() {
   const [runModal, setRunModal] = useState(null); 
   const [page, setPage] = useState(0);
   const [nextId, setNextId] = useState(3000);
+  const [selectedAiTool, setSelectedAiTool] = useState(AI_TOOLS[0].id);
+  const [useQuery, setUseQuery] = useState(true);
   const searchRef = useRef(null);
 
   useEffect(() => {
@@ -290,6 +349,12 @@ export default function App() {
       if (savedFavs) setFavs(new Set(JSON.parse(savedFavs)));
       const savedData = localStorage.getItem(STORAGE_KEY + "_data");
       if (savedData) { setPrompts(JSON.parse(savedData)); } else { setPrompts(INITIAL_PROMPTS); }
+      
+      const savedAiTool = localStorage.getItem(STORAGE_KEY + "_ai_tool");
+      if (savedAiTool) setSelectedAiTool(savedAiTool);
+
+      const savedUseQuery = localStorage.getItem(STORAGE_KEY + "_use_query");
+      if (savedUseQuery !== null) setUseQuery(savedUseQuery === "true");
     } catch(e) { console.error(e); setPrompts(INITIAL_PROMPTS); }
     setIsLoaded(true);
   }, []);
@@ -303,8 +368,10 @@ export default function App() {
     if (isLoaded) {
       localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(prompts));
       localStorage.setItem(STORAGE_KEY + "_favs", JSON.stringify([...favs]));
+      localStorage.setItem(STORAGE_KEY + "_ai_tool", selectedAiTool);
+      localStorage.setItem(STORAGE_KEY + "_use_query", String(useQuery));
     }
-  }, [prompts, favs, isLoaded]);
+  }, [prompts, favs, isLoaded, selectedAiTool, useQuery]);
 
   const filtered = useMemo(() => {
     let list = prompts;
@@ -416,7 +483,14 @@ export default function App() {
         </div>
       )}
       {modal && <CrudModal item={modal==="add"?null:modal} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete} />}
-      {runModal && <PromptRunModal item={runModal} onClose={()=>setRunModal(null)} />}
+      {runModal && (
+        <PromptRunModal 
+          item={runModal} 
+          onClose={()=>setRunModal(null)} 
+          selectedAiTool={selectedAiTool}
+          setSelectedAiTool={setSelectedAiTool}
+        />
+      )}
     </div>
   );
 }
