@@ -588,6 +588,8 @@ body.dark .card-footer { background: rgba(255, 255, 255, 0.03); }
   }
   .run-modal {
     max-width: none;
+    min-width: 0;
+    width: 100%;
     border-radius: 0;
     height: 100vh;
     height: 100dvh;
@@ -1004,7 +1006,20 @@ select.form-control:focus {
 /* iOS Safari auto-zooms on input focus when font-size < 16px.            */
 /* Setting 16px on mobile prevents unwanted zoom while keeping            */
 /* the smaller sizes on desktop for visual density.                       */
+/* overflow-x: hidden prevents residual horizontal scroll after zoom.     */
+/* touch-action: manipulation disables double-tap zoom on form elements.  */
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 @media screen and (max-width: 767px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+
   .search-box input,
   .form-control,
   select.form-control,
@@ -1013,6 +1028,7 @@ select.form-control:focus {
   textarea,
   select {
     font-size: 16px;
+    touch-action: manipulation;
   }
 }
 
