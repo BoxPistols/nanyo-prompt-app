@@ -1000,3 +1000,19 @@ select.form-control:focus {
   cursor: pointer;
 }
 
+/* ─── iOS Safari Zoom Prevention ──────────────────────────────────────── */
+/* iOS Safari auto-zooms on input focus when font-size < 16px.            */
+/* Setting 16px on mobile prevents unwanted zoom while keeping            */
+/* the smaller sizes on desktop for visual density.                       */
+@media screen and (max-width: 767px) {
+  .search-box input,
+  .form-control,
+  select.form-control,
+  .prompt-textarea,
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
