@@ -1,0 +1,66 @@
+name: Sync Nanyo City Prompt Data
+
+on:
+  # 毎日 JST 9:00 (UTC 0:00) に実行
+  schedule:
+    - cron: '0 0 * * *'
+  # 手動実行も可能
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 tqdm
+
+      - name: Run sync script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scraper/sync_upstream.py
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --quiet src/data/ && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Count new prompts
+        if: steps.changes.outputs.changed == 'true'
+        id: count
+        run: |
+          ADDED=$(git diff --stat src/data/raw_data.json | grep -oP '\d+ insertion' | grep -oP '\d+' || echo "0")
+          echo "added=$ADDED" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "feat: sync Nanyo City prompt data (auto-update)"
+          title: "feat: 南陽市プロンプトデータ自動同期"
+          body: |
+            ## 自動同期
+
+            上流リポジトリ [nanyo-line/prompt](https://github.com/nanyo-line/prompt) から新規プロンプトを検出しました。
+
+            ### 変更内容
+            - `src/data/raw_data.json` - プロンプトメタデータの更新
+            - `src/data/contents.json` - プロンプト本文の追加
+
+            > このPRは GitHub Actions の定期実行により自動作成されました。
+          branch: auto/sync-nanyo-data
+          labels: |
+            automated
+            data-update
