@@ -597,7 +597,11 @@ export default function App() {
               >
                 <button className={`fav-btn ${favs.has(p.id)?'active':''}`} onClick={(e)=>{e.stopPropagation();toggleFav(p.id)}}>{favs.has(p.id)?<Icons.HeartFilled />:<Icons.Heart />}</button>
                 <div className="card-body">
-                  <div className="card-meta"><span className="card-id">#{p.id}</span>{p.isNew && <span className="card-new-badge">NEW</span>}</div>
+                  <div className="card-meta">
+                    <span className="card-id">#{p.id}</span>
+                    {p.createdAt && <span className="card-date">{p.createdAt}</span>}
+                    {p.isNew && <span className="card-new-badge">NEW</span>}
+                  </div>
                   <h3 className="card-title">{p.title}</h3>
                   <div className="card-tags">
                     <span className="tag" style={{background:col.bg, color:col.fg}}><CatIcon cat={p.c1} /> {p.c1}</span>

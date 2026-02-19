@@ -11,7 +11,6 @@ import json
 import re
 import time
 import os
-import sys
 from bs4 import BeautifulSoup
 
 # ─── 設定 ─────────────────────────────────────────────────────────────────────
@@ -40,15 +39,20 @@ def get_upstream_prompt_files():
     if token:
         headers["Authorization"] = f"token {token}"
 
-    resp = requests.get(GITHUB_API_TREE, headers=headers, timeout=30)
+    try:
+        resp = requests.get(GITHUB_API_TREE, headers=headers, timeout=30)
 
-    if resp.status_code == 403:
-        print("GitHub API rate limit. GITHUB_TOKEN を設定してください。")
+        if resp.status_code == 403:
+            print("GitHub API rate limit. GITHUB_TOKEN を設定してください。")
+            print("フォールバック: 既知の範囲をスキャンします...")
+            return scan_known_range()
+
+        if resp.status_code != 200:
+            print(f"GitHub API エラー: {resp.status_code}")
+            return scan_known_range()
+    except requests.exceptions.RequestException as e:
+        print(f"GitHub API リクエストエラー: {e}")
         print("フォールバック: 既知の範囲をスキャンします...")
-        return scan_known_range()
-
-    if resp.status_code != 200:
-        print(f"GitHub API エラー: {resp.status_code}")
         return scan_known_range()
 
     tree = resp.json().get("tree", [])
@@ -81,7 +85,7 @@ def get_upstream_prompt_files():
 def scan_known_range():
     """API制限時のフォールバック: 既知範囲をHTTPでスキャン"""
     prompt_files = {}
-    print("既知の範囲 (1-1019, S001-S016, d001-d004) をスキャン中...")
+    print("既知の範囲 (1-1019, S001-S019, d001-d004) をスキャン中...")
 
     # Numeric range
     for num in range(1, 1020):
@@ -91,12 +95,12 @@ def scan_known_range():
     # S-prefix
     for i in range(1, 20):
         sid = f"S{str(i).zfill(3)}"
-        prompt_files[f"S{str(i).zfill(3)}"] = {"type": "S", "file": f"{sid}.html", "id": sid}
+        prompt_files[sid] = {"type": "S", "file": f"{sid}.html", "id": sid}
 
     # d-prefix
     for i in range(1, 5):
         did = f"d{str(i).zfill(3)}"
-        prompt_files[f"d{str(i).zfill(3)}"] = {"type": "d", "file": f"{did}.html", "id": did}
+        prompt_files[did] = {"type": "d", "file": f"{did}.html", "id": did}
 
     return prompt_files
 
@@ -107,17 +111,6 @@ def get_existing_link_ids(raw_data):
     for item in raw_data:
         link_ids.add(str(item[2]))
     return link_ids
-
-
-def get_existing_numeric_to_g_mapping(raw_data):
-    """数値IDからG-prefix IDへのマッピングを構築"""
-    mapping = {}
-    for item in raw_data:
-        link_id = str(item[2])
-        if link_id.startswith("G"):
-            num = int(link_id[1:])
-            mapping[num] = link_id
-    return mapping
 
 
 def fetch_prompt_page(file_path):
@@ -178,7 +171,6 @@ def fetch_prompt_page(file_path):
 def find_new_prompts(upstream_files, raw_data):
     """上流にあって現在のデータにないプロンプトを特定"""
     existing_link_ids = get_existing_link_ids(raw_data)
-    g_mapping = get_existing_numeric_to_g_mapping(raw_data)
 
     new_prompts = []
 

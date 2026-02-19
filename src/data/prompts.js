@@ -26,16 +26,31 @@ const decodeUrl = (linkId) => {
 };
 
 export const INITIAL_PROMPTS = RAW.d.map((d) => ({
+
   id: d[0],
+
   title: d[1],
+
   linkId: d[2],
+
   url: decodeUrl(d[2]),
+
   searchUrl: getSearchUrl(d[1]),
+
   c1: RAW.c1[d[3]],
+
   c2: RAW.c2[d[4]],
+
   c3: RAW.c3[d[5]] || "",
+
   sub: (RAW.s || [""])[d[6]] || "", 
+
   tag: (RAW.tg || [""])[d[7]] || "",
+
   isNew: d[8] === 1,
+
+  createdAt: d[9] || "",
+
   isUser: false,
+
 }));

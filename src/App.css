@@ -377,7 +377,7 @@ body.dark .chip.active { box-shadow: 0 1px 4px rgba(124, 131, 196, 0.25); }
 
 .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
 
-.card-meta { display: flex; align-items: center; gap: 6px; }
+.card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
 .card-id {
   background: var(--bg);
   padding: 1px 6px;
@@ -387,6 +387,11 @@ body.dark .chip.active { box-shadow: 0 1px 4px rgba(124, 131, 196, 0.25); }
   font-size: 10px;
   font-family: var(--font-en);
   letter-spacing: 0.02em;
+}
+.card-date {
+  font-size: 10px;
+  color: var(--ink3);
+  font-family: var(--font-en);
 }
 .card-new-badge {
   font-size: 9px;
