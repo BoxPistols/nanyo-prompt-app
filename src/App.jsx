@@ -450,8 +450,23 @@ export default function App() {
       }
       const savedFavs = localStorage.getItem(STORAGE_KEY + "_favs");
       if (savedFavs) setFavs(new Set(JSON.parse(savedFavs)));
+      
       const savedData = localStorage.getItem(STORAGE_KEY + "_data");
-      if (savedData) { setPrompts(JSON.parse(savedData)); } else { setPrompts(INITIAL_PROMPTS); }
+      if (savedData) {
+        const localPrompts = JSON.parse(savedData);
+        // ソース側の件数が増えている場合、新規分をマージする
+        if (INITIAL_PROMPTS.length > localPrompts.filter(p => !p.isUser).length) {
+          const localIds = new Set(localPrompts.map(p => p.id));
+          const newFromSource = INITIAL_PROMPTS.filter(p => !localIds.has(p.id));
+          const merged = [...localPrompts, ...newFromSource];
+          setPrompts(merged);
+          localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(merged));
+        } else {
+          setPrompts(localPrompts);
+        }
+      } else {
+        setPrompts(INITIAL_PROMPTS);
+      }
       
       const savedAiTool = localStorage.getItem(STORAGE_KEY + "_ai_tool");
       if (savedAiTool) setSelectedAiTool(savedAiTool);
