@@ -55,7 +55,7 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.app { max-width: 1280px; margin: 0 auto; min-height: 100vh; padding-bottom: 80px; }
+.app { max-width: 1440px; margin: 0 auto; min-height: 100vh; padding-bottom: 16px; }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */
 .header {

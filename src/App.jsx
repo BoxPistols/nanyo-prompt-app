@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import "./App.css";
 import { RAW, INITIAL_PROMPTS } from "./data/prompts";
@@ -83,7 +83,7 @@ const getColor = (c1, isDark) => {
 };
 
 // ─── Modal: PromptRunModal ──────────────────────────────────────────────────
-const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool, useQuery, setUseQuery }) => {
+const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [mobileTab, setMobileTab] = useState("preview"); // "preview" | "form"
   const [isMaximized, setIsMaximized] = useState(false);
@@ -195,55 +195,6 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool, useQ
   useEffect(() => {
     setEditedPrompt(finalPromptText);
   }, [finalPromptText]);
-
-  // プレビュー描画: インライン変数ハイライト + 追加変数表示
-  const renderPreview = () => {
-    let parts = [promptText];
-    inlinePlaceholders.forEach(p => {
-      const newParts = [];
-      const token = `{${p}}`;
-      const val = values[p] || "";
-      parts.forEach(part => {
-        if (typeof part !== 'string') { newParts.push(part); return; }
-        const subParts = part.split(token);
-        for (let i = 0; i < subParts.length; i++) {
-          newParts.push(subParts[i]);
-          if (i < subParts.length - 1) {
-            newParts.push(
-              <span key={`${p}-${i}`} style={{
-                color: val ? 'var(--primary)' : 'var(--danger)', fontWeight: '700',
-                backgroundColor: val ? 'var(--primary-light)' : 'rgba(239, 68, 68, 0.08)',
-                padding: '0 2px', borderRadius: '2px', borderBottom: `2px solid ${val ? 'var(--primary)' : 'var(--danger)'}`
-              }}>
-                {val || token}
-              </span>
-            );
-          }
-        }
-      });
-      parts = newParts;
-    });
-    if (additionalVars.length > 0) {
-      parts.push('\n\n');
-      additionalVars.forEach((p, idx) => {
-        const val = values[p] || "";
-        parts.push(
-          <span key={`append-${p}`}>
-            <span style={{ fontWeight: '600' }}>{p}: </span>
-            <span style={{
-              color: val ? 'var(--primary)' : 'var(--danger)', fontWeight: '700',
-              backgroundColor: val ? 'var(--primary-light)' : 'rgba(239, 68, 68, 0.08)',
-              padding: '0 2px', borderRadius: '2px', borderBottom: `2px solid ${val ? 'var(--primary)' : 'var(--danger)'}`
-            }}>
-              {val || `{${p}}`}
-            </span>
-            {idx < additionalVars.length - 1 ? '\n' : ''}
-          </span>
-        );
-      });
-    }
-    return parts;
-  };
 
   const handleCopy = async () => {
     try {
@@ -421,61 +372,60 @@ const CrudModal = ({ item, onSave, onDelete, onClose }) => {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 export default function App() {
-  const [prompts, setPrompts] = useState([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [prompts, setPrompts] = useState(() => {
+    try {
+      const savedData = localStorage.getItem(STORAGE_KEY + "_data");
+      if (savedData) {
+        const localPrompts = JSON.parse(savedData);
+        if (INITIAL_PROMPTS.length > localPrompts.filter(p => !p.isUser).length) {
+          const localIds = new Set(localPrompts.map(p => p.id));
+          const newFromSource = INITIAL_PROMPTS.filter(p => !localIds.has(p.id));
+          const merged = [...localPrompts, ...newFromSource];
+          localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(merged));
+          return merged;
+        }
+        return localPrompts;
+      }
+      return INITIAL_PROMPTS;
+    } catch(e) { console.error(e); return INITIAL_PROMPTS; }
+  });
+  const [isLoaded] = useState(true);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchMode, setSearchMode] = useState("smart");
   const [activeC1, setActiveC1] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [showFav, setShowFav] = useState(false);
-  const [favs, setFavs] = useState(new Set());
+  const [favs, setFavs] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY + "_favs");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
   const [viewMode, setViewMode] = useState("grid");
-  const [darkMode, setDarkMode] = useState(false);
-  const [modal, setModal] = useState(null); 
-  const [runModal, setRunModal] = useState(null); 
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY + "_theme");
+      return saved === "dark" || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch { return false; }
+  });
+  const [modal, setModal] = useState(null);
+  const [runModal, setRunModal] = useState(null);
   const [page, setPage] = useState(0);
   const [nextId, setNextId] = useState(3000);
-  const [selectedAiTool, setSelectedAiTool] = useState(AI_TOOLS[0].id);
-  const [useQuery, setUseQuery] = useState(true);
+  const [selectedAiTool, setSelectedAiTool] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY + "_ai_tool") || AI_TOOLS[0].id;
+    } catch { return AI_TOOLS[0].id; }
+  });
+  const [useQuery] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY + "_use_query");
+      return saved !== null ? saved === "true" : true;
+    } catch { return true; }
+  });
   const searchRef = useRef(null);
   const isComposingRef = useRef(false);
-
-  useEffect(() => {
-    try {
-      const savedTheme = localStorage.getItem(STORAGE_KEY + "_theme");
-      if (savedTheme === "dark" || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        setDarkMode(true);
-        document.body.classList.add('dark');
-      }
-      const savedFavs = localStorage.getItem(STORAGE_KEY + "_favs");
-      if (savedFavs) setFavs(new Set(JSON.parse(savedFavs)));
-      
-      const savedData = localStorage.getItem(STORAGE_KEY + "_data");
-      if (savedData) {
-        const localPrompts = JSON.parse(savedData);
-        // ソース側の件数が増えている場合、新規分をマージする
-        if (INITIAL_PROMPTS.length > localPrompts.filter(p => !p.isUser).length) {
-          const localIds = new Set(localPrompts.map(p => p.id));
-          const newFromSource = INITIAL_PROMPTS.filter(p => !localIds.has(p.id));
-          const merged = [...localPrompts, ...newFromSource];
-          setPrompts(merged);
-          localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(merged));
-        } else {
-          setPrompts(localPrompts);
-        }
-      } else {
-        setPrompts(INITIAL_PROMPTS);
-      }
-      
-      const savedAiTool = localStorage.getItem(STORAGE_KEY + "_ai_tool");
-      if (savedAiTool) setSelectedAiTool(savedAiTool);
-
-      const savedUseQuery = localStorage.getItem(STORAGE_KEY + "_use_query");
-      if (savedUseQuery !== null) setUseQuery(savedUseQuery === "true");
-    } catch(e) { console.error(e); setPrompts(INITIAL_PROMPTS); }
-    setIsLoaded(true);
-  }, []);
 
   useEffect(() => {
     if (darkMode) { document.body.classList.add('dark'); localStorage.setItem(STORAGE_KEY + "_theme", "dark"); } 
@@ -494,7 +444,7 @@ export default function App() {
   // ─── 検索デバウンス: 日本語IME変換確定を待つ ───
   useEffect(() => {
     if (isComposingRef.current) return;
-    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    const timer = setTimeout(() => { setDebouncedQuery(query); setPage(0); }, 300);
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -524,7 +474,6 @@ export default function App() {
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paged = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
-  useEffect(() => setPage(0), [debouncedQuery, searchMode, activeC1, showNew, showFav]);
 
   const toggleFav = (id) => { setFavs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); };
   const handleSave = (form) => {
@@ -558,13 +507,13 @@ export default function App() {
           <input ref={searchRef} value={query}
             onChange={e => setQuery(e.target.value)}
             onCompositionStart={() => { isComposingRef.current = true; }}
-            onCompositionEnd={e => { isComposingRef.current = false; setQuery(e.target.value); setDebouncedQuery(e.target.value); }}
+            onCompositionEnd={e => { isComposingRef.current = false; setQuery(e.target.value); setDebouncedQuery(e.target.value); setPage(0); }}
             placeholder="キーワード、ID、カテゴリで検索..." />
           {query && <button className="search-clear" onClick={()=>{setQuery("");searchRef.current?.focus()}}>×</button>}
         </div>
         <div className="search-modes">
           {Object.entries(SEARCH_MODES).map(([key, { label }]) => (
-            <button key={key} className={`search-mode-btn ${searchMode === key ? 'active' : ''}`} onClick={() => setSearchMode(key)} title={SEARCH_MODES[key].description}>
+            <button key={key} className={`search-mode-btn ${searchMode === key ? 'active' : ''}`} onClick={() => { setSearchMode(key); setPage(0); }} title={SEARCH_MODES[key].description}>
               {label}
             </button>
           ))}
@@ -586,16 +535,16 @@ export default function App() {
         )}
       </div>
       <div className="filters">
-        <button className={`chip ${!activeC1 && !showNew && !showFav ? 'active' : ''}`} onClick={()=>{setActiveC1("");setShowNew(false);setShowFav(false)}}>
+        <button className={`chip ${!activeC1 && !showNew && !showFav ? 'active' : ''}`} onClick={()=>{setActiveC1("");setShowNew(false);setShowFav(false);setPage(0)}}>
           すべて <span className="chip-count">{prompts.length}</span>
         </button>
         {RAW.c1.map(c => (
-          <button key={c} className={`chip ${activeC1 === c ? 'active' : ''}`} onClick={()=>{setActiveC1(activeC1===c?"":c);setShowNew(false);setShowFav(false)}}>
+          <button key={c} className={`chip ${activeC1 === c ? 'active' : ''}`} onClick={()=>{setActiveC1(activeC1===c?"":c);setShowNew(false);setShowFav(false);setPage(0)}}>
             <CatIcon cat={c} /> {c}
           </button>
         ))}
-        <button className={`chip chip-new ${showNew ? 'active' : ''}`} onClick={()=>{setShowNew(!showNew);setActiveC1("");setShowFav(false)}}><Icons.Zap /> 新着</button>
-        <button className={`chip ${showFav ? 'active' : ''}`} onClick={()=>{setShowFav(!showFav);setActiveC1("");setShowNew(false)}} style={showFav?{background:'#fee2e2',color:'#ef4444',borderColor:'#ef4444'}:{}}><Icons.Heart /> お気に入り</button>
+        <button className={`chip chip-new ${showNew ? 'active' : ''}`} onClick={()=>{setShowNew(!showNew);setActiveC1("");setShowFav(false);setPage(0)}}><Icons.Zap /> 新着</button>
+        <button className={`chip ${showFav ? 'active' : ''}`} onClick={()=>{setShowFav(!showFav);setActiveC1("");setShowNew(false);setPage(0)}} style={showFav?{background:'#fee2e2',color:'#ef4444',borderColor:'#ef4444'}:{}}><Icons.Heart /> お気に入り</button>
       </div>
       <div className={`grid ${viewMode === 'list' ? 'list' : ''}`}>
         {paged.length === 0 ? (
@@ -678,13 +627,11 @@ export default function App() {
       </footer>
       {modal && <CrudModal item={modal==="add"?null:modal} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete} />}
       {runModal && (
-        <PromptRunModal 
-          item={runModal} 
-          onClose={()=>setRunModal(null)} 
+        <PromptRunModal
+          item={runModal}
+          onClose={()=>setRunModal(null)}
           selectedAiTool={selectedAiTool}
           setSelectedAiTool={setSelectedAiTool}
-          useQuery={useQuery}
-          setUseQuery={setUseQuery}
         />
       )}
     </div>
