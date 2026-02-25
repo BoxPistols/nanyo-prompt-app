@@ -120,13 +120,12 @@ const HelpModal = ({ onClose }) => {
           </section>
 
           <section className="help-section">
-            <h3>関連記事</h3>
-            <ul className="help-links">
-              <li><a href="https://www.smartwatchlife.jp/63815/" target="_blank" rel="noopener noreferrer">南陽市が公開した「生成AIプロンプト集748例」が前代未聞のボリュームで凄すぎた — Smart Watch Life</a></li>
-              <li><a href="https://www.matudakta.com/entry/2026/02/14/143705" target="_blank" rel="noopener noreferrer">山形県南陽市の生成AIプロンプト集から学ぶこと — 松田軽太のブロぐる</a></li>
-              <li><a href="https://note.com/nepia_infinity/n/nf8fda2473563" target="_blank" rel="noopener noreferrer">山形県南陽市のプロンプト集が想像の斜め上過ぎた — note</a></li>
-              <li><a href="https://note.com/usk_noter/n/n577ed2c56f31" target="_blank" rel="noopener noreferrer">南陽市の生成AIプロンプト集がマジすごい！ — note</a></li>
-            </ul>
+            <h3>プロンプト入力の例</h3>
+            <div className="help-example">
+              <p><strong>例：#001 複雑な文章の要点をわかりやすく解説してもらう</strong></p>
+              <p>プロンプト内の入力欄に要約したい文章を貼り付けて「コピーしてAIで使う」をクリックすると、プロンプト全体がクリップボードにコピーされ、選択したAIツールが開きます。</p>
+              <p>AIツールの入力欄に貼り付けて送信すると、要点が箇条書きで整理された回答が得られます。</p>
+            </div>
           </section>
 
           <section className="help-section">

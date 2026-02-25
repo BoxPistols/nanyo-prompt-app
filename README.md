@@ -20,13 +20,6 @@
 
 南陽市DX普及主幹 佐野毅氏（[@ichigonme](https://x.com/ichigonme)）による先進的な取り組みに感謝いたします。
 
-## 関連記事・メディア紹介
-
-- [南陽市が公開した「生成AIプロンプト集748例」が前代未聞のボリュームで凄すぎた — Smart Watch Life](https://www.smartwatchlife.jp/63815/)
-- [山形県南陽市の生成AIプロンプト集から学ぶこと — 松田軽太のブロぐる](https://www.matudakta.com/entry/2026/02/14/143705)
-- [山形県南陽市のプロンプト集が想像の斜め上過ぎた — note](https://note.com/nepia_infinity/n/nf8fda2473563)
-- [南陽市の生成AIプロンプト集がマジすごい！ — note](https://note.com/usk_noter/n/n577ed2c56f31)
-
 ## 機能
 
 - キーワード・ID・カテゴリによる検索（あいまい検索対応）
