@@ -754,7 +754,7 @@ export default function App() {
 
   return (
     <div className="app">
-      {introStep >= 0 && <OnboardingOverlay steps={INTRO_STEPS} currentStep={introStep} onNext={() => {
+      {introStep >= 0 && !modal && !runModal && !helpModal && <OnboardingOverlay steps={INTRO_STEPS} currentStep={introStep} onNext={() => {
         if (introStep < INTRO_STEPS.length - 1) {
           setIntroStep(introStep + 1);
         } else {
