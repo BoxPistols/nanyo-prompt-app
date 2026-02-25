@@ -1266,6 +1266,38 @@ body.dark .introjs-skipbutton {
   font-size: 0.8rem !important;
   opacity: 0.8;
 }
+.help-shortcuts {
+  list-style: none !important;
+  padding-left: 0 !important;
+  display: grid;
+  gap: 6px;
+}
+.help-shortcuts li {
+  font-size: 0.84rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.help-shortcuts kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  background: var(--bg, #f5f5f5);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  min-width: 24px;
+  text-align: center;
+}
+body.dark .help-shortcuts kbd {
+  background: rgba(255,255,255,0.08);
+}
+.help-shortcut-note {
+  font-size: 0.75rem !important;
+  opacity: 0.6;
+  margin-top: 0.4rem !important;
+}
+
 .help-example {
   background: var(--card);
   border: 1px solid var(--border);

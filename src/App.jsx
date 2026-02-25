@@ -8,6 +8,10 @@ import contentsData from "./data/contents.json";
 import { searchPrompts, SEARCH_MODES } from "./utils/search";
 
 // ─── Constants & Helpers ───────────────────────────────────────────────────
+const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+const MOD_KEY = isMac ? 'metaKey' : 'ctrlKey';
+const MOD_LABEL = isMac ? '⌘' : 'Ctrl';
+
 const STORAGE_KEY = "nanyo_prompts_v5";
 const PER_PAGE = 32;
 const MAX_QUERY_LENGTH = 2000; // URLクエリの安全な上限文字数
@@ -86,6 +90,12 @@ const getColor = (c1, isDark) => {
 
 // ─── Modal: HelpModal ────────────────────────────────────────────────────────
 const HelpModal = ({ onClose }) => {
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
   return createPortal(
     <div className="modal-backdrop help-modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal help-modal">
@@ -119,6 +129,18 @@ const HelpModal = ({ onClose }) => {
               <li>著作権：南陽市に帰属し、<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> の下で提供されています。</li>
             </ul>
             <p className="help-credit">南陽市DX普及主幹 佐野毅氏（<a href="https://x.com/ichigonme" target="_blank" rel="noopener noreferrer">@ichigonme</a>）による先進的な取り組みに感謝いたします。</p>
+          </section>
+
+          <section className="help-section">
+            <h3>キーボードショートカット</h3>
+            <ul className="help-shortcuts">
+              <li><kbd>{MOD_LABEL}+K</kbd> 検索にフォーカス</li>
+              <li><kbd>?</kbd> このヘルプを表示</li>
+              <li><kbd>D</kbd> ダークモード / <kbd>L</kbd> ライトモード</li>
+              <li><kbd>G</kbd> グリッド表示 / <kbd>Shift+L</kbd> リスト表示</li>
+              <li><kbd>Esc</kbd> モーダルを閉じる</li>
+            </ul>
+            <p className="help-shortcut-note">※ テキスト入力中はショートカットは無効です</p>
           </section>
 
           <section className="help-section">
@@ -542,6 +564,56 @@ export default function App() {
     } catch {}
   }, [isLoaded]);
 
+  // ─── グローバルキーボードショートカット ───
+  useEffect(() => {
+    const isTyping = () => {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    };
+
+    const handleKeydown = (e) => {
+      // Cmd/Ctrl+K: 検索フォーカス（入力中でも発火）
+      if (e[MOD_KEY] && e.key === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+
+      // 入力中はその他のショートカットを無効化
+      if (isTyping()) return;
+
+      // モーダルが開いている間はスキップ（Escは各モーダルが処理）
+      if (modal || runModal || helpModal) return;
+
+      switch (e.key) {
+        case '?':
+          e.preventDefault();
+          setHelpModal(true);
+          break;
+        case 'd': case 'D':
+          e.preventDefault();
+          setDarkMode(true);
+          break;
+        case 'l':
+          e.preventDefault();
+          setDarkMode(false);
+          break;
+        case 'g': case 'G':
+          e.preventDefault();
+          setViewMode('grid');
+          break;
+        case 'L':
+          e.preventDefault();
+          setViewMode('list');
+          break;
+      }
+    };
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [modal, runModal, helpModal]);
+
   // ─── 検索デバウンス: 日本語IME変換確定を待つ ───
   useEffect(() => {
     if (isComposingRef.current) return;
@@ -628,7 +700,7 @@ export default function App() {
             onChange={e => setQuery(e.target.value)}
             onCompositionStart={() => { isComposingRef.current = true; }}
             onCompositionEnd={e => { isComposingRef.current = false; setQuery(e.target.value); setDebouncedQuery(e.target.value); setPage(0); }}
-            placeholder="キーワード、ID、カテゴリで検索..." />
+            placeholder={`検索... (${MOD_LABEL}+K)`} />
           {query && <button className="search-clear" onClick={()=>{setQuery("");searchRef.current?.focus()}}>×</button>}
         </div>
         <div className="search-modes">
