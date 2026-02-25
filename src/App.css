@@ -1038,6 +1038,56 @@ html {
   }
 }
 
+/* ─── Intro.js Customization ──────────────────────────────────────────── */
+.introjs-tooltip {
+  font-family: inherit;
+  border-radius: 12px;
+  max-width: 360px;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+.introjs-tooltip-header {
+  display: none;
+}
+.introjs-tooltiptext {
+  padding: 16px 20px;
+}
+.introjs-button {
+  font-family: inherit;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  padding: 6px 14px;
+  text-shadow: none;
+}
+.introjs-button:focus {
+  box-shadow: none;
+}
+.introjs-progressbar {
+  background: var(--primary, #4f46e5);
+}
+.introjs-helperLayer {
+  border-radius: 12px;
+}
+body.dark .introjs-tooltip {
+  background: var(--card, #1e1e2e);
+  color: var(--ink, #e0e0e0);
+}
+body.dark .introjs-arrow.top { border-bottom-color: var(--card, #1e1e2e); }
+body.dark .introjs-arrow.bottom { border-top-color: var(--card, #1e1e2e); }
+body.dark .introjs-arrow.left { border-right-color: var(--card, #1e1e2e); }
+body.dark .introjs-arrow.right { border-left-color: var(--card, #1e1e2e); }
+body.dark .introjs-button {
+  background: var(--card, #1e1e2e);
+  color: var(--ink, #e0e0e0);
+  border-color: var(--border, #333);
+}
+body.dark .introjs-button:hover {
+  background: var(--border, #333);
+}
+body.dark .introjs-skipbutton {
+  color: var(--ink2, #999);
+}
+
 /* ─── Footer ──────────────────────────────────────────────────────────── */
 .app-footer {
   margin-top: 3rem;

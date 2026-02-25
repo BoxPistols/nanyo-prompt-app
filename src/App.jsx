@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { Steps } from "intro.js-react";
+import "intro.js/introjs.css";
 import "./App.css";
 import { RAW, INITIAL_PROMPTS } from "./data/prompts";
 import contentsData from "./data/contents.json";
@@ -497,6 +499,17 @@ export default function App() {
   });
   const searchRef = useRef(null);
   const isComposingRef = useRef(false);
+  const [introEnabled, setIntroEnabled] = useState(() => {
+    try { return !localStorage.getItem(STORAGE_KEY + "_intro_done"); } catch { return true; }
+  });
+
+  const introSteps = [
+    { element: '.logo', intro: '<strong>南陽市DX Prompts</strong><br/>山形県南陽市が公開する生成AI活用プロンプト集を検索・活用できるアプリです。' },
+    { element: '.search-box', intro: '<strong>検索</strong><br/>キーワード、プロンプトID（例: 001）、カテゴリ名で検索できます。あいまい検索にも対応しています。' },
+    { element: '.filters', intro: '<strong>カテゴリフィルタ</strong><br/>カテゴリボタンで絞り込めます。「新着」や「お気に入り」でも絞り込みが可能です。' },
+    { element: '.grid .card:first-child', intro: '<strong>プロンプトカード</strong><br/>クリックするとプロンプトの詳細を表示。「コピーしてAIで使う」でChatGPT・Gemini・Claudeに貼り付けて使えます。' },
+    { element: '.header-controls', intro: '<strong>ツールバー</strong><br/>ダークモード切替、表示切替（グリッド/リスト）、ヘルプ、カスタムプロンプトの追加ができます。' },
+  ];
 
   useEffect(() => {
     if (darkMode) { document.body.classList.add('dark'); localStorage.setItem(STORAGE_KEY + "_theme", "dark"); } 
@@ -558,6 +571,24 @@ export default function App() {
 
   return (
     <div className="app">
+      <Steps
+        enabled={introEnabled}
+        steps={introSteps}
+        initialStep={0}
+        onExit={() => {
+          setIntroEnabled(false);
+          try { localStorage.setItem(STORAGE_KEY + "_intro_done", "1"); } catch {}
+        }}
+        options={{
+          nextLabel: '次へ',
+          prevLabel: '戻る',
+          doneLabel: '始める',
+          showBullets: true,
+          showProgress: true,
+          exitOnOverlayClick: true,
+          scrollToElement: true,
+        }}
+      />
       <header className="header">
         <div className="header-inner">
           <div className="logo">
