@@ -193,6 +193,11 @@ const HelpModal = ({ onClose, onStartTour }) => {
               <li><kbd>Enter</kbd> フォーカス中のカードを開く</li>
               <li><kbd>Esc</kbd> モーダルを閉じる</li>
             </ul>
+            <h4>プロンプト実行モーダル内</h4>
+            <ul className="help-shortcuts">
+              <li><kbd>F</kbd> フルスクリーン切替</li>
+              <li><kbd>S</kbd> 設定（AIツール選択）パネル切替</li>
+            </ul>
             <p className="help-shortcut-note">※ テキスト入力中は {MOD_LABEL}+K 以外のショートカットは無効です</p>
           </section>
 
@@ -281,9 +286,15 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
   const [editedPrompt, setEditedPrompt] = useState("");
 
   useEffect(() => {
-    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
+    const handleKey = (e) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setIsMaximized(v => !v); }
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); setShowSettings(v => !v); }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
   // ─── Keyboard awareness via visualViewport API ───
