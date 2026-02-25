@@ -1089,6 +1089,7 @@ html {
   margin-top: 0.8rem;
   font-size: 0.78rem;
   opacity: 0.75;
+  text-align: center;
 }
 .footer-developer a {
   color: var(--ink2);
@@ -1136,5 +1137,102 @@ html {
 
 .footer-disclaimer-body li {
   margin-bottom: 0.4rem;
+}
+
+/* ─── Help Modal ──────────────────────────────────────────────────────── */
+.help-modal {
+  width: min(640px, 92vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.help-modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.help-modal-body {
+  padding: 20px 24px 28px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.help-section {
+  margin-bottom: 1.6rem;
+}
+.help-section:last-child {
+  margin-bottom: 0;
+}
+.help-section h3 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: var(--primary);
+}
+.help-section p {
+  font-size: 0.84rem;
+  line-height: 1.7;
+  margin: 0 0 0.4rem;
+  color: var(--text-secondary);
+}
+.help-section ul {
+  font-size: 0.84rem;
+  line-height: 1.7;
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--text-secondary);
+}
+.help-section li {
+  margin-bottom: 0.3rem;
+}
+.help-links {
+  list-style: none !important;
+  padding-left: 0 !important;
+}
+.help-links li::before {
+  content: "→ ";
+  opacity: 0.4;
+}
+.help-links a {
+  color: var(--primary);
+  text-decoration: none;
+}
+.help-links a:hover {
+  text-decoration: underline;
+}
+.help-credit {
+  margin-top: 0.6rem !important;
+  font-size: 0.8rem !important;
+  opacity: 0.8;
+}
+.help-disclaimer {
+  list-style: disc !important;
+  font-size: 0.78rem !important;
+  opacity: 0.75;
+}
+
+@media (max-width: 600px) {
+  .help-modal {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .help-modal-header {
+    padding: 16px 16px 12px;
+  }
+  .help-modal-body {
+    padding: 16px 16px 24px;
+  }
 }
 

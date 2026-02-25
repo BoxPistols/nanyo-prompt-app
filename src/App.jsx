@@ -48,6 +48,7 @@ const Icons = {
   Maximize: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>,
   Restore: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>,
   GripResize: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="22" y1="2" x2="2" y2="22"/><line x1="22" y1="10" x2="10" y2="22"/><line x1="22" y1="18" x2="18" y2="22"/></svg>,
+  Help: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
 };
 
 // Category icon mapping
@@ -79,6 +80,77 @@ const CAT_COLORS = {
 const getColor = (c1, isDark) => {
   const cfg = CAT_COLORS[c1] || CAT_COLORS["その他"];
   return isDark ? { bg: cfg.darkBg, fg: cfg.darkFg } : cfg;
+};
+
+// ─── Modal: HelpModal ────────────────────────────────────────────────────────
+const HelpModal = ({ onClose }) => {
+  return createPortal(
+    <div className="modal-backdrop help-modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal help-modal">
+        <div className="help-modal-header">
+          <h2>このアプリについて</h2>
+          <button onClick={onClose} className="run-modal-icon-btn" style={{ fontSize: '20px', color: 'var(--ink2)' }}>×</button>
+        </div>
+        <div className="help-modal-body">
+          <section className="help-section">
+            <h3>概要</h3>
+            <p>山形県南陽市が公開する「一発OK!! 市民も使える！生成AI活用実例集」のプロンプトデータを、検索・閲覧しやすくしたWebアプリです。南陽市の確認のもと、個人が開発・運営しています。</p>
+          </section>
+
+          <section className="help-section">
+            <h3>使い方</h3>
+            <ul>
+              <li><strong>検索</strong> — キーワード、プロンプトID、カテゴリ名で検索できます。あいまい検索にも対応しています。</li>
+              <li><strong>フィルタ</strong> — カテゴリボタンで絞り込み。「新着」で最近追加されたプロンプトを確認できます。</li>
+              <li><strong>プロンプト実行</strong> — カードをクリックするとプロンプトの詳細を表示。「コピーしてAIで使う」でプロンプトをコピーし、選択したAIツール（ChatGPT / Gemini / Claude）を開きます。</li>
+              <li><strong>お気に入り</strong> — ハートアイコンでお気に入りに登録。「お気に入り」フィルタで一覧表示できます。</li>
+              <li><strong>カスタムプロンプト</strong> — 「追加」ボタンで自分だけのプロンプトを作成・管理できます。</li>
+            </ul>
+          </section>
+
+          <section className="help-section">
+            <h3>プロンプトデータについて</h3>
+            <ul className="help-links">
+              <li>出典：<a href="http://www.city.nanyo.yamagata.jp/dxchosei/5793" target="_blank" rel="noopener noreferrer">山形県南陽市「一発OK!! 市民も使える！生成AI活用実例集」</a></li>
+              <li>南陽市公式サイト：<a href="http://www.city.nanyo.yamagata.jp/" target="_blank" rel="noopener noreferrer">http://www.city.nanyo.yamagata.jp/</a></li>
+              <li>プロンプトデータ（GitHub）：<a href="https://github.com/nanyo-line/prompt" target="_blank" rel="noopener noreferrer">nanyo-line/prompt</a></li>
+              <li>著作権：南陽市に帰属し、<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> の下で提供されています。</li>
+            </ul>
+            <p className="help-credit">南陽市DX普及主幹 佐野毅氏（<a href="https://x.com/ichigonme" target="_blank" rel="noopener noreferrer">@ichigonme</a>）による先進的な取り組みに感謝いたします。</p>
+          </section>
+
+          <section className="help-section">
+            <h3>関連記事</h3>
+            <ul className="help-links">
+              <li><a href="https://www.smartwatchlife.jp/63815/" target="_blank" rel="noopener noreferrer">南陽市が公開した「生成AIプロンプト集748例」が前代未聞のボリュームで凄すぎた — Smart Watch Life</a></li>
+              <li><a href="https://www.matudakta.com/entry/2026/02/14/143705" target="_blank" rel="noopener noreferrer">山形県南陽市の生成AIプロンプト集から学ぶこと — 松田軽太のブロぐる</a></li>
+              <li><a href="https://note.com/nepia_infinity/n/nf8fda2473563" target="_blank" rel="noopener noreferrer">山形県南陽市のプロンプト集が想像の斜め上過ぎた — note</a></li>
+              <li><a href="https://note.com/usk_noter/n/n577ed2c56f31" target="_blank" rel="noopener noreferrer">南陽市の生成AIプロンプト集がマジすごい！ — note</a></li>
+            </ul>
+          </section>
+
+          <section className="help-section">
+            <h3>アプリ開発</h3>
+            <ul className="help-links">
+              <li>開発者：Ito Atsushi（<a href="https://x.com/AsagiriDesign" target="_blank" rel="noopener noreferrer">@AsagiriDesign</a>）</li>
+              <li>ソースコード：<a href="https://github.com/BoxPistols/nanyo-prompt-app" target="_blank" rel="noopener noreferrer">GitHub</a>（MIT License）</li>
+            </ul>
+          </section>
+
+          <section className="help-section">
+            <h3>免責事項</h3>
+            <ul className="help-disclaimer">
+              <li>本アプリで提供するプロンプトは、特定の成果や情報の正確性を保証するものではありません。</li>
+              <li>生成AIの特性上、出力結果には誤りや不適切な内容が含まれる可能性があります。生成された回答の正確性・妥当性・安全性および第三者の権利侵害の有無については、利用者自身の責任でファクトチェックを行ってください。</li>
+              <li>本アプリの利用または利用できなかったことによって生じた直接的・間接的な損害について、本アプリ開発者および南陽市は一切の責任を負いません。</li>
+              <li>元のプロンプトデータは試行的な取り組みとして提供されており、予告なく内容の変更または公開が中止される場合があります。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 };
 
 // ─── Modal: PromptRunModal ──────────────────────────────────────────────────
@@ -410,6 +482,7 @@ export default function App() {
   });
   const [modal, setModal] = useState(null);
   const [runModal, setRunModal] = useState(null);
+  const [helpModal, setHelpModal] = useState(false);
   const [page, setPage] = useState(0);
   const [nextId, setNextId] = useState(3000);
   const [selectedAiTool, setSelectedAiTool] = useState(() => {
@@ -496,6 +569,7 @@ export default function App() {
             <button className={`btn-icon ${darkMode ? 'active' : ''}`} onClick={()=>setDarkMode(!darkMode)}>{darkMode ? <Icons.Moon /> : <Icons.Sun />}</button>
             <button className={`btn-icon ${viewMode==='grid'?'active':''}`} onClick={()=>setViewMode('grid')}><Icons.Grid /></button>
             <button className={`btn-icon ${viewMode==='list'?'active':''}`} onClick={()=>setViewMode('list')}><Icons.List /></button>
+            <button className="btn-icon" onClick={()=>setHelpModal(true)} title="ヘルプ・このアプリについて"><Icons.Help /></button>
             <button className="btn-icon btn-add" onClick={()=>setModal("add")}><Icons.Plus /> 追加</button>
           </div>
         </div>
@@ -608,7 +682,7 @@ export default function App() {
               プロンプトデータは南陽市に著作権が帰属し、<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> の下で提供されています。
             </p>
             <p className="footer-app-note">
-              本アプリは南陽市の公式サービスではなく、公開データを活用した個人開発のプロジェクトです。
+              本アプリは南陽市の確認のもと、公開データを活用して個人が開発・運営しています。
             </p>
           </div>
           <div className="footer-developer">
@@ -636,6 +710,7 @@ export default function App() {
           setSelectedAiTool={setSelectedAiTool}
         />
       )}
+      {helpModal && <HelpModal onClose={() => setHelpModal(false)} />}
     </div>
   );
 }

@@ -1,62 +1,67 @@
-# 南陽市DXプロンプトライブラリ
+# 南陽市DX Prompts
 
-このプロジェクトは、南陽市の「生成AI活用実例集」をモデルにしたモダンなプロンプトライブラリ・アプリです。
+山形県南陽市が公開する「一発OK!! 市民も使える！生成AI活用実例集」のプロンプトデータを、検索・閲覧しやすくしたWebアプリです。
 
-> **注意**: 本プロジェクトは南陽市の公式プロジェクトではありません。個人が学習・利便性向上の目的で作成した非公式アプリケーションです。
+**https://nanyo-prompt.vercel.app/**
 
-## データの出典・著作権
+南陽市の確認のもと、個人が開発・運営しています。
 
-本アプリで使用しているプロンプトデータは、以下を出典としています。
+## プロンプトデータの出典・著作権
 
-- **出典**: 山形県南陽市「生成AI活用実例集」
-- **データ元リポジトリ**: [nanyo-line/prompt](https://github.com/nanyo-line/prompt)（南陽市公式GitHub）
-- **公式サイト**: [https://nanyo-line.github.io/prompt/](https://nanyo-line.github.io/prompt/)
+本アプリで使用しているプロンプトデータは、山形県南陽市が公開する以下のデータを出典としています。
 
-### 著作権について
+| 項目 | 内容 |
+|------|------|
+| 出典 | [山形県南陽市「一発OK!! 市民も使える！生成AI活用実例集」](http://www.city.nanyo.yamagata.jp/dxchosei/5793) |
+| 南陽市公式サイト | [http://www.city.nanyo.yamagata.jp/](http://www.city.nanyo.yamagata.jp/) |
+| プロンプトデータ（GitHub） | [nanyo-line/prompt](https://github.com/nanyo-line/prompt) |
+| 著作権 | 南陽市に帰属 |
+| ライセンス | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ja) |
 
-プロンプトデータの著作権は **南陽市** に帰属します。本プロジェクトは南陽市が公開しているデータを参照・表示するものであり、データの権利を主張するものではありません。データの利用にあたっては、南陽市の利用規約に従ってください。
+南陽市DX普及主幹 佐野毅氏（[@ichigonme](https://x.com/ichigonme)）による先進的な取り組みに感謝いたします。
 
-### 本プロジェクトのライセンス
+## 関連記事・メディア紹介
 
-アプリケーションのソースコード（UI・スクレイパー等）は [MIT License](./LICENSE) の下で公開しています。ただし、プロンプトデータ自体は上記の通り南陽市の著作物です。
+- [南陽市が公開した「生成AIプロンプト集748例」が前代未聞のボリュームで凄すぎた — Smart Watch Life](https://www.smartwatchlife.jp/63815/)
+- [山形県南陽市の生成AIプロンプト集から学ぶこと — 松田軽太のブロぐる](https://www.matudakta.com/entry/2026/02/14/143705)
+- [山形県南陽市のプロンプト集が想像の斜め上過ぎた — note](https://note.com/nepia_infinity/n/nf8fda2473563)
+- [南陽市の生成AIプロンプト集がマジすごい！ — note](https://note.com/usk_noter/n/n577ed2c56f31)
 
-## プロジェクト構成
+## 機能
 
-- `src/`: React フロントエンド（Vite）
-  - `src/data/prompts.js`: カテゴリ定義とデータ処理ロジック
-  - `src/data/raw_data.json`: プロンプトのリスト（配列データ）
-- `scraper/`: プロンプト本文取得用スクレイパー（Python）
-  - `scraper/main.py`: スクレイピング実行スクリプト
-  - `scraper/requirements.txt`: 必要なPythonライブラリ
+- キーワード・ID・カテゴリによる検索（あいまい検索対応）
+- カテゴリフィルタ・新着フィルタ
+- プロンプトのコピー＆AIツール連携（ChatGPT / Gemini / Claude）
+- 入力フォーム付きプロンプトの変数埋め込み
+- お気に入り登録
+- カスタムプロンプトの追加・編集・削除
+- ダークモード
+- レスポンシブ対応（モバイル / デスクトップ）
 
-## 使い方
-
-### 1. フロントエンドの起動
+## 開発
 
 ```bash
-# 依存関係のインストール
 npm install
-
-# 開発サーバーの起動
 npm run dev
 ```
 
-### 2. スクレイピングの実行（プロンプト本文の取得）
+### プロジェクト構成
 
-プロンプトの本文を外部サイトから取得して、より充実したデータベースを作成する場合に使用します。
+- `src/` — React フロントエンド（Vite）
+  - `src/App.jsx` — メインアプリケーション
+  - `src/data/prompts.js` — カテゴリ定義とデータ処理
+  - `src/data/raw_data.json` — プロンプトデータ
+  - `src/utils/search.js` — 検索ロジック
+- `scraper/` — プロンプト本文取得用スクレイパー（Python）
 
-```bash
-cd scraper
-# ライブラリのインストール
-pip install -r requirements.txt
+## 開発者
 
-# スクレイピングの実行
-python3 main.py
-```
+**Ito Atsushi**
+- X: [@AsagiriDesign](https://x.com/AsagiriDesign)
+- GitHub: [@BoxPistols](https://github.com/BoxPistols)
 
-実行後、`scraper/nanyo_prompts_full.json` が生成されます。
+## ライセンス
 
-## 注意事項
+アプリケーションのソースコードは [MIT License](./LICENSE) の下で公開しています。
 
-- `src/data/raw_data.json` には現在サンプルデータのみが含まれています。提供された全データをこのファイルに貼り付けてください。
-- スクレイピングを実行する際は、サーバーへの負荷を考慮し、実行間隔（`SLEEP_TIME`）を適切に保ってください。
+プロンプトデータ自体は南陽市に著作権が帰属し、[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ja) の下で提供されています。
