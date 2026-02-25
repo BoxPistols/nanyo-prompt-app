@@ -138,7 +138,7 @@ const OnboardingOverlay = ({ steps, currentStep, onNext, onSkip }) => {
 };
 
 // ─── Modal: HelpModal ────────────────────────────────────────────────────────
-const HelpModal = ({ onClose }) => {
+const HelpModal = ({ onClose, onStartTour }) => {
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleEsc);
@@ -156,6 +156,7 @@ const HelpModal = ({ onClose }) => {
           <section className="help-section">
             <h3>概要</h3>
             <p>山形県南陽市が公開する「一発OK!! 市民も使える！生成AI活用実例集」のプロンプトデータを、検索・閲覧しやすくしたWebアプリです。南陽市の確認のもと、個人が開発・運営しています。</p>
+            <button className="help-tour-btn" onClick={onStartTour}>ガイドツアーを見る</button>
           </section>
 
           <section className="help-section">
@@ -916,7 +917,7 @@ export default function App() {
           setSelectedAiTool={setSelectedAiTool}
         />
       )}
-      {helpModal && <HelpModal onClose={() => setHelpModal(false)} />}
+      {helpModal && <HelpModal onClose={() => setHelpModal(false)} onStartTour={() => { setHelpModal(false); setIntroStep(0); }} />}
     </div>
   );
 }
