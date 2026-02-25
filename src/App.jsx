@@ -615,8 +615,7 @@ export default function App() {
           case 'ArrowUp': e.preventDefault(); focusCard(Math.max(cardIdx - cols, 0)); return;
           case 'Enter':
             e.preventDefault();
-            const p = paged[cardIdx];
-            if (p) setRunModal(p);
+            cards[cardIdx]?.querySelector('.btn-primary')?.click();
             return;
         }
       }
@@ -652,7 +651,7 @@ export default function App() {
     };
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
-  }, [modal, runModal, helpModal, paged]);
+  }, [modal, runModal, helpModal]);
 
   // ─── 検索デバウンス: 日本語IME変換確定を待つ ───
   useEffect(() => {
