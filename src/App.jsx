@@ -555,17 +555,26 @@ export default function App() {
   }, [prompts, favs, isLoaded, selectedAiTool, useQuery]);
 
   useEffect(() => {
-    if (!isLoaded || introChecked.current) return;
-    introChecked.current = true;
+    if (introChecked.current) return;
     try {
-      if (!localStorage.getItem(STORAGE_KEY + "_intro_done")) {
-        const timer = setTimeout(() => {
-          if (document.querySelector('.grid .card')) setIntroEnabled(true);
-        }, 500);
-        return () => clearTimeout(timer);
+      if (localStorage.getItem(STORAGE_KEY + "_intro_done")) return;
+    } catch { return; }
+    introChecked.current = true;
+
+    let attempts = 0;
+    const check = setInterval(() => {
+      attempts++;
+      if (document.querySelector('.grid .card')) {
+        clearInterval(check);
+        setIntroEnabled(true);
+      } else if (attempts > 20) {
+        clearInterval(check);
+        // カードなしでもロゴから開始
+        setIntroEnabled(true);
       }
-    } catch {}
-  }, [isLoaded]);
+    }, 200);
+    return () => clearInterval(check);
+  }, []);
 
   // ─── グローバルキーボードショートカット ───
   useEffect(() => {
