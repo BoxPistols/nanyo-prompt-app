@@ -235,10 +235,119 @@ const HelpModal = ({ onClose, onStartTour }) => {
 };
 
 // ─── Modal: PromptRunModal ──────────────────────────────────────────────────
+// ─── モーダル内オンボーディング ──────────────────────────────────────────────
+const MODAL_INTRO_STEPS = [
+  {
+    selector: '.modal-content-wrapper',
+    title: 'プロンプトの使い方',
+    text: 'このモーダルでは、プロンプトに情報を入力してAIに送るテキストを作成できます。順に説明します。',
+  },
+  {
+    selector: '.prompt-form',
+    title: '入力フォーム',
+    text: '左側のフォームに情報を入力すると、右側のプレビューにリアルタイムで反映されます。',
+    fallbackSelector: '.prompt-preview',
+    fallbackText: 'プレビュー欄は直接編集もできます。自由にテキストを調整してください。',
+  },
+  {
+    selector: '.prompt-preview',
+    title: 'プレビュー確認',
+    text: '完成したプロンプトをここで確認できます。内容を直接編集することもできます。',
+  },
+  {
+    selector: '.run-modal-footer',
+    title: 'コピー & AI貼付',
+    text: '「コピー」でクリップボードに保存。「AI貼付」でコピー後にAIツールを自動で開きます。',
+  },
+];
+
+const ModalOnboarding = ({ currentStep, totalSteps, step, onNext, onSkip, containerRef }) => {
+  const [pos, setPos] = useState(null);
+
+  useEffect(() => {
+    if (!step || !containerRef.current) return;
+    const container = containerRef.current;
+    const el = container.querySelector(step.selector);
+    if (el) {
+      const containerRect = container.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      setPos({
+        top: r.top - containerRect.top,
+        left: r.left - containerRect.left,
+        width: r.width,
+        height: r.height,
+        absTop: r.top,
+        absLeft: r.left,
+      });
+    } else if (step.fallbackSelector) {
+      const fallback = container.querySelector(step.fallbackSelector);
+      if (fallback) {
+        const containerRect = container.getBoundingClientRect();
+        const r = fallback.getBoundingClientRect();
+        setPos({
+          top: r.top - containerRect.top,
+          left: r.left - containerRect.left,
+          width: r.width,
+          height: r.height,
+          absTop: r.top,
+          absLeft: r.left,
+        });
+      } else {
+        setPos(null);
+      }
+    } else {
+      setPos(null);
+    }
+  }, [currentStep, step, containerRef]);
+
+  const isLast = currentStep >= totalSteps - 1;
+
+  const tooltipStyle = {};
+  if (pos) {
+    const below = pos.absTop + pos.height + 12;
+    if (below + 160 < window.innerHeight) {
+      tooltipStyle.top = (pos.absTop + pos.height + 12) + 'px';
+    } else {
+      tooltipStyle.bottom = (window.innerHeight - pos.absTop + 12) + 'px';
+    }
+    tooltipStyle.left = Math.max(12, Math.min(pos.absLeft, window.innerWidth - 340)) + 'px';
+  } else {
+    tooltipStyle.top = '50%';
+    tooltipStyle.left = '50%';
+    tooltipStyle.transform = 'translate(-50%, -50%)';
+  }
+
+  return (
+    <div className="modal-onboarding-overlay" onClick={onSkip}>
+      {pos && (
+        <div className="modal-onboarding-highlight" style={{
+          top: pos.absTop - 4,
+          left: pos.absLeft - 4,
+          width: pos.width + 8,
+          height: pos.height + 8,
+        }} />
+      )}
+      <div className="onboarding-tooltip" style={{ ...tooltipStyle, zIndex: 10003 }} onClick={e => e.stopPropagation()}>
+        <div className="onboarding-step-count">{currentStep + 1} / {totalSteps}</div>
+        <h4>{step?.title}</h4>
+        <p>{step?.fallbackSelector && containerRef.current && !containerRef.current.querySelector(step.selector) ? step.fallbackText : step?.text}</p>
+        <div className="onboarding-actions">
+          <button className="onboarding-skip" onClick={onSkip}>スキップ</button>
+          <button className="onboarding-next" onClick={onNext}>{isLast ? '始める' : '次へ →'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [mobileTab, setMobileTab] = useState("preview"); // "preview" | "form"
   const [isMaximized, setIsMaximized] = useState(false);
+  const modalRef = useRef(null);
+
+  // モーダル内オンボーディング
+  const [modalIntroStep, setModalIntroStep] = useState(-1);
   // コンテンツ解析: 本文抽出、セクション変数抽出、UI混入テキスト除去
   const { promptText, inlinePlaceholders, additionalVars, allPlaceholders } = useMemo(() => {
     let content = (contentsData[item.id] || "プロンプトの本文が読み込めませんでした。")
@@ -285,9 +394,28 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
   const [pasteStatus, setPasteStatus] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
 
+  // モーダルオンボーディング: 初回チェック
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(STORAGE_KEY + "_modal_intro_done")) return;
+    } catch { return; }
+    const timer = setTimeout(() => {
+      setModalIntroStep(0);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const dismissModalIntro = () => {
+    setModalIntroStep(-1);
+    try { localStorage.setItem(STORAGE_KEY + "_modal_intro_done", "1"); } catch {}
+  };
+
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'Escape') {
+        if (modalIntroStep >= 0) { dismissModalIntro(); return; }
+        onClose(); return;
+      }
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
       if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setIsMaximized(v => !v); }
@@ -295,7 +423,7 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose]);
+  }, [onClose, modalIntroStep]);
 
   // ─── Keyboard awareness via visualViewport API ───
   useEffect(() => {
@@ -377,8 +505,8 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
   const hasForm = allPlaceholders.length > 0;
 
   return createPortal(
-    <div className="modal-backdrop run-modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`modal run-modal ${isMaximized ? 'run-modal-maximized' : ''}`}>
+    <div className="modal-backdrop run-modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) { if (modalIntroStep >= 0) return; onClose(); } }}>
+      <div ref={modalRef} className={`modal run-modal ${isMaximized ? 'run-modal-maximized' : ''}`}>
         {/* ─── Header (compact on mobile) ─── */}
         <div className="run-modal-header">
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -473,6 +601,28 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
           </button>
         </div>
         {!isMaximized && <span className="resize-grip hide-mobile"><Icons.GripResize /></span>}
+        {modalIntroStep >= 0 && (() => {
+          // フォームがない場合はステップ1（入力フォーム）をスキップしたリストを使う
+          const steps = hasForm ? MODAL_INTRO_STEPS : MODAL_INTRO_STEPS.filter((_, i) => i !== 1);
+          const step = steps[modalIntroStep];
+          if (!step) return null;
+          return (
+            <ModalOnboarding
+              currentStep={modalIntroStep}
+              totalSteps={steps.length}
+              step={step}
+              containerRef={modalRef}
+              onNext={() => {
+                if (modalIntroStep < steps.length - 1) {
+                  setModalIntroStep(modalIntroStep + 1);
+                } else {
+                  dismissModalIntro();
+                }
+              }}
+              onSkip={dismissModalIntro}
+            />
+          );
+        })()}
       </div>
     </div>,
     document.body

@@ -1116,6 +1116,22 @@ html {
   opacity: 0.9;
 }
 
+/* ─── Modal Onboarding ────────────────────────────────────────────────── */
+.modal-onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  background: rgba(0, 0, 0, 0.5);
+}
+.modal-onboarding-highlight {
+  position: fixed;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  border: 2px solid var(--primary, #4f46e5);
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
 /* ─── Footer ──────────────────────────────────────────────────────────── */
 .app-footer {
   margin-top: 3rem;
