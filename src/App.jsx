@@ -138,7 +138,7 @@ const OnboardingOverlay = ({ steps, currentStep, onNext, onSkip }) => {
 };
 
 // ─── Modal: HelpModal ────────────────────────────────────────────────────────
-const HelpModal = ({ onClose, onStartTour }) => {
+const HelpModal = ({ onClose, onStartTour, onResetData }) => {
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleEsc);
@@ -226,6 +226,12 @@ const HelpModal = ({ onClose, onStartTour }) => {
               <li>本アプリの利用または利用できなかったことによって生じた直接的・間接的な損害について、本アプリ開発者および南陽市は一切の責任を負いません。</li>
               <li>元のプロンプトデータは試行的な取り組みとして提供されており、予告なく内容の変更または公開が中止される場合があります。</li>
             </ul>
+          </section>
+
+          <section className="help-section help-reset-section">
+            <h3>データの初期化</h3>
+            <p>お気に入り、カスタムプロンプト、テーマ設定、オンボーディング履歴など、すべてのローカルデータを削除して初期状態に戻します。</p>
+            <button className="help-reset-btn" onClick={onResetData}>すべてのデータを初期化</button>
           </section>
         </div>
       </div>
@@ -911,6 +917,19 @@ export default function App() {
   };
   const handleDelete = (id) => { if(window.confirm("削除しますか？")) { setPrompts(prev => prev.filter(p => p.id !== id)); setModal(null); } };
 
+  const handleResetData = () => {
+    const ok = window.confirm(
+      "すべてのデータを初期化します。\n\nお気に入り、カスタムプロンプト、テーマ設定などが削除されます。この操作は元に戻せません。\n\n本当に初期化しますか？"
+    );
+    if (!ok) return;
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith(STORAGE_KEY))
+        .forEach(k => localStorage.removeItem(k));
+    } catch {}
+    window.location.reload();
+  };
+
   if (!isLoaded) return <div style={{padding:40, textAlign:'center'}}>Loading...</div>;
 
   return (
@@ -1078,7 +1097,7 @@ export default function App() {
           setSelectedAiTool={setSelectedAiTool}
         />
       )}
-      {helpModal && <HelpModal onClose={() => setHelpModal(false)} onStartTour={() => { setHelpModal(false); setIntroStep(0); }} />}
+      {helpModal && <HelpModal onClose={() => setHelpModal(false)} onStartTour={() => { setHelpModal(false); setIntroStep(0); }} onResetData={handleResetData} />}
     </div>
   );
 }
