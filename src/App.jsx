@@ -658,6 +658,79 @@ const PROMPT_SECTIONS = [
   { key: "variables", label: "変数設定", placeholder: "ユーザーが入力する変数名を改行区切りで記述\n例:\n対象の文章\n出力言語", rows: 2 },
 ];
 
+const PROMPT_SEEDS = [
+  {
+    name: "文章要約",
+    title: "文章を要約するプロンプト",
+    c1: "文章作成・要約",
+    c2: "要約・整理",
+    sections: {
+      purpose: "長文や複雑な文章を簡潔にまとめ、要点を把握しやすくする。",
+      role: "あなたは優秀な要約のスペシャリストです。文章構造を正確に把握し、重要な情報を漏らさず簡潔にまとめる能力があります。",
+      instructions: "以下の{対象の文章}を読み、要点を箇条書きで整理してください。\n重要なキーワードや数値は必ず含めてください。",
+      rules: "- 原文の意味を変えない\n- 専門用語はそのまま残す\n- 箇条書きは5〜10項目程度にまとめる",
+      output: "マークダウン形式の箇条書き",
+      variables: "対象の文章",
+    },
+  },
+  {
+    name: "コードレビュー",
+    title: "コードレビューを依頼するプロンプト",
+    c1: "プログラミング",
+    c2: "マクロ・プログラム",
+    sections: {
+      purpose: "コードの品質向上、バグの早期発見、ベストプラクティスへの準拠を確認する。",
+      role: "あなたはシニアソフトウェアエンジニアです。{プログラミング言語}に精通し、可読性・保守性・パフォーマンスの観点からレビューを行います。",
+      instructions: "以下の{コード}をレビューしてください。\nバグ、改善点、セキュリティリスクがあれば指摘してください。",
+      rules: "- 具体的な修正案を提示する\n- 良い点も指摘する\n- 重要度（高/中/低）をつける",
+      output: "## 概要\n（全体評価）\n\n## 指摘事項\n| # | 重要度 | 内容 | 修正案 |\n\n## 良い点",
+      variables: "プログラミング言語\nコード",
+    },
+  },
+  {
+    name: "メール作成",
+    title: "ビジネスメールを作成するプロンプト",
+    c1: "コミュニケーション支援",
+    c2: "コミュニケーション支援",
+    sections: {
+      purpose: "状況に応じた適切なビジネスメールを効率的に作成する。",
+      role: "あなたはビジネスコミュニケーションの専門家です。日本語のビジネスマナーに精通しています。",
+      instructions: "{相手との関係}の方に、{メールの目的}についてビジネスメールを作成してください。",
+      rules: "- 丁寧かつ簡潔に\n- 件名も含める\n- 敬語を適切に使用する",
+      output: "件名:\n本文:",
+      variables: "相手との関係\nメールの目的",
+    },
+  },
+  {
+    name: "学習ガイド",
+    title: "技術トピックの学習ロードマップ作成",
+    c1: "意識改革・スキルアップ",
+    c2: "教育関連",
+    sections: {
+      purpose: "特定の技術トピックについて、体系的な学習計画を作成する。",
+      role: "あなたは経験豊富な技術メンターです。初心者から上級者まで、学習者のレベルに応じた効果的な学習プランを設計できます。",
+      instructions: "{学習したいトピック}について、{現在のスキルレベル}の学習者向けのロードマップを作成してください。",
+      rules: "- 段階的に難易度を上げる\n- 各ステップに推定学習時間を記載\n- 無料で利用できるリソースを優先する\n- 実践的な演習を含める",
+      output: "## ロードマップ概要\n## フェーズ1: 基礎（目安: X週間）\n## フェーズ2: 実践（目安: X週間）\n## フェーズ3: 応用（目安: X週間）\n## おすすめリソース",
+      variables: "学習したいトピック\n現在のスキルレベル",
+    },
+  },
+  {
+    name: "議事録整理",
+    title: "会議メモから議事録を作成するプロンプト",
+    c1: "業務改善",
+    c2: "業務改善・戦略",
+    sections: {
+      purpose: "散漫な会議メモから、構造化された議事録を効率的に作成する。",
+      role: "あなたは議事録作成のエキスパートです。要点を正確に把握し、決定事項とアクションアイテムを明確に整理できます。",
+      instructions: "以下の{会議メモ}を整理し、正式な議事録を作成してください。",
+      rules: "- 発言の要旨を正確に記録する\n- 決定事項とTODOを明確に分ける\n- 担当者と期限を記載する",
+      output: "## 会議名:\n## 日時:\n## 参加者:\n## 議題と討議内容:\n## 決定事項:\n## アクションアイテム:\n| # | 担当 | 内容 | 期限 |",
+      variables: "会議メモ",
+    },
+  },
+];
+
 const buildBody = (sections) => {
   return PROMPT_SECTIONS
     .filter(s => sections[s.key]?.trim())
@@ -727,6 +800,30 @@ const CrudModal = ({ item, onSave, onDelete, onClose }) => {
           <p>{isEdit ? `#${item.id} の内容を変更します` : "オリジナルのプロンプトを登録できます"}</p>
         </div>
         <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          {!isEdit && (
+            <div className="form-group">
+              <label style={{ fontSize: '13px', color: 'var(--ink3)' }}>テンプレートから作成</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {PROMPT_SEEDS.map(seed => (
+                  <button
+                    key={seed.name}
+                    type="button"
+                    className="btn-action btn-outline"
+                    style={{ fontSize: '12px', padding: '4px 10px' }}
+                    onClick={() => {
+                      set("title", seed.title);
+                      set("c1", seed.c1);
+                      set("c2", seed.c2);
+                      setSections(seed.sections);
+                      setShowAllSections(true);
+                    }}
+                  >
+                    {seed.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="form-group">
             <label>タイトル *</label>
             <input className="form-control" value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="例: 議事録を要約するプロンプト" autoFocus />
