@@ -344,10 +344,25 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
     const sectionMatch = content.match(sectionRegex);
     let sectionVars = [];
     if (sectionMatch) {
-      sectionVars = sectionMatch[1]
+      const rawVars = sectionMatch[1]
         .split(/\n\n+/)
         .map(s => s.trim())
         .filter(s => s.length > 0);
+      // h3見出し＋textarea内容の重複を解消: コロン付きサブ項目を親項目に統合
+      // 例: ["AIモデル①の回答", "AIモデル①の名称：", "AIモデル①の回答："] → ["AIモデル①の回答"]
+      const merged = [];
+      for (let i = 0; i < rawVars.length; i++) {
+        const v = rawVars[i];
+        // 前の項目（親候補）がコロンなしで、現在の項目がコロン付きサブ項目なら統合対象
+        if (merged.length > 0 && /[：:]$/.test(v)) {
+          const parent = merged[merged.length - 1];
+          if (!/[：:]$/.test(parent) && v.replace(/[：:]$/, '').includes(parent.replace(/の回答|の入力|の情報/g, '').substring(0, 4))) {
+            continue; // サブ項目をスキップ（親に統合）
+          }
+        }
+        merged.push(v);
+      }
+      sectionVars = merged;
       content = content.replace(sectionRegex, '');
     }
 
