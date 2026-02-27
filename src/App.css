@@ -941,6 +941,9 @@ select.form-control:focus {
 .crud-modal {
   max-width: 720px;
   width: calc(100vw - 32px);
+  max-height: calc(100dvh - 40px);
+  display: flex;
+  flex-direction: column;
 }
 .crud-modal textarea.form-control {
   font-family: var(--font-en), var(--font-ja);

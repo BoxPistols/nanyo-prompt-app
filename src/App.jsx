@@ -649,13 +649,13 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
 // ─── Modal: CrudModal ────────────────────────────────────────────────────────
 const PROMPT_SECTIONS = [
   { key: "purpose", label: "目的・ねらい", placeholder: "このプロンプトの目的を記述", rows: 2 },
-  { key: "role", label: "あなたの役割", placeholder: "例: あなたは優秀なアシスタントです", rows: 2 },
-  { key: "prerequisites", label: "前提条件", placeholder: "前提となる条件やリソースを記述", rows: 2 },
-  { key: "instructions", label: "実行指示 *", placeholder: "AIへの具体的な指示を記述\n{変数名} で変数を埋め込めます", rows: 4 },
-  { key: "rules", label: "ルール", placeholder: "守るべきルールや制約を記述", rows: 2 },
-  { key: "output", label: "出力形式", placeholder: "例: マークダウン形式で出力", rows: 2 },
+  { key: "role", label: "あなたの役割", placeholder: "例: あなたは優秀なアシスタントです", rows: 3 },
+  { key: "prerequisites", label: "前提条件", placeholder: "前提となる条件やリソースを記述", rows: 3 },
+  { key: "instructions", label: "実行指示 *", placeholder: "AIへの具体的な指示を記述\n{変数名} で変数を埋め込めます", rows: 5 },
+  { key: "rules", label: "ルール", placeholder: "守るべきルールや制約を記述", rows: 4 },
+  { key: "output", label: "出力形式", placeholder: "例: マークダウン形式で出力", rows: 3 },
   { key: "supplement", label: "補足", placeholder: "補足事項があれば記述", rows: 2 },
-  { key: "variables", label: "変数設定", placeholder: "ユーザーが入力する変数名を改行区切りで記述\n例:\n対象の文章\n出力言語", rows: 2 },
+  { key: "variables", label: "変数設定", placeholder: "ユーザーが入力する変数名を改行区切りで記述\n例:\n対象の文章\n出力言語", rows: 3 },
 ];
 
 const PROMPT_SEEDS = [
@@ -799,7 +799,7 @@ const CrudModal = ({ item, onSave, onDelete, onClose }) => {
           <h2>{isEdit ? "プロンプトを編集" : "新規プロンプトを追加"}</h2>
           <p>{isEdit ? `#${item.id} の内容を変更します` : "オリジナルのプロンプトを登録できます"}</p>
         </div>
-        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <div className="modal-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {!isEdit && (
             <div className="form-group">
               <label style={{ fontSize: '13px', color: 'var(--ink3)' }}>テンプレートから作成</label>
