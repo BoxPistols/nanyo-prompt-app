@@ -171,6 +171,29 @@ const HelpModal = ({ onClose, onStartTour, onResetData, onExport, onImport }) =>
           </section>
 
           <section className="help-section">
+            <h3>カスタムプロンプトの作成</h3>
+            <p>右上の「＋ 追加」ボタンを押すと新規作成モーダルが開きます。</p>
+            <ul>
+              <li><strong>テンプレートから作成</strong> — 「文章要約」「コードレビュー」「メール作成」などの雛形を選ぶと各フィールドが自動入力されます。そのまま保存してもOKです。</li>
+              <li><strong>シンプル入力</strong> — プロンプト本文を1つのテキストエリアにまとめて書く方式です。</li>
+              <li><strong>セクション分割入力</strong> — 「セクション分割入力」ボタンで切り替えると、役割・前提条件・実行指示・ルール・出力形式など8つの欄に分けて入力できます。保存時に1つの本文へ自動変換されます。</li>
+              <li><strong>変数の埋め込み</strong> — 本文に <code>{`{変数名}`}</code> と書くと、プロンプト実行時に入力欄が自動生成されます。例：<code>{`{対象の文章}`}</code> と書けば、実行ボタンを押したときにテキスト入力欄が現れます。</li>
+              <li><strong>検出された変数</strong> — 入力中に <code>{`{}`}</code> で囲んだ単語を自動検出し、フォーム下部に一覧表示します。</li>
+            </ul>
+            <h4>セクションの説明</h4>
+            <ul>
+              <li><strong>目的・ねらい</strong> — このプロンプトで何を達成したいかを書きます。</li>
+              <li><strong>あなたの役割</strong> — AIに与える役柄（例：「あなたは優秀な要約専門家です」）。</li>
+              <li><strong>前提条件</strong> — AIが知っておくべき背景情報や制約。</li>
+              <li><strong>実行指示 ＊</strong> — AIへの具体的な指示文（必須）。</li>
+              <li><strong>ルール</strong> — 守らせたいルールや出力の制約。</li>
+              <li><strong>出力形式</strong> — 箇条書き・表・マークダウンなど出力の形を指定。</li>
+              <li><strong>補足</strong> — その他の補足情報。</li>
+              <li><strong>変数設定</strong> — 実行時に入力させる変数名を1行ずつ列挙します。</li>
+            </ul>
+          </section>
+
+          <section className="help-section">
             <h3>プロンプトデータについて</h3>
             <ul className="help-links">
               <li>出典：<a href="http://www.city.nanyo.yamagata.jp/dxchosei/5793" target="_blank" rel="noopener noreferrer">山形県南陽市「一発OK!! 市民も使える！生成AI活用実例集」</a></li>
