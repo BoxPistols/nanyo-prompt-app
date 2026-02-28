@@ -820,7 +820,7 @@ const CrudModal = ({ item, onSave, onDelete, onClose }) => {
       <div className="modal crud-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{isEdit ? "プロンプトを編集" : "新規プロンプトを追加"}</h2>
-          <p>{isEdit ? `#${item.id} の内容を変更します` : "オリジナルのプロンプトを登録できます"}</p>
+          <p>{isEdit ? `#${item.id} の内容を変更します` : "作成したプロンプトはこのブラウザに保存されます"}</p>
         </div>
         <div className="modal-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {!isEdit && (
