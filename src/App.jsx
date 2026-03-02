@@ -54,6 +54,9 @@ const Icons = {
   GripResize: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="22" y1="2" x2="2" y2="22"/><line x1="22" y1="10" x2="10" y2="22"/><line x1="22" y1="18" x2="18" y2="22"/></svg>,
   Help: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   User: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  Database: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>,
+  Upload: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+  Download: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
 };
 
 // Category icon mapping
@@ -139,7 +142,7 @@ const OnboardingOverlay = ({ steps, currentStep, onNext, onSkip }) => {
 };
 
 // ─── Modal: HelpModal ────────────────────────────────────────────────────────
-const HelpModal = ({ onClose, onStartTour, onResetData, onExport, onImport }) => {
+const HelpModal = ({ onClose, onStartTour, onResetData }) => {
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleEsc);
@@ -261,15 +264,8 @@ const HelpModal = ({ onClose, onStartTour, onResetData, onExport, onImport }) =>
               <li>大切なプロンプトは、下記の「エクスポート」でファイルに保存しておくことをおすすめします。</li>
             </ul>
             <h4>バックアップ・復元・共有</h4>
-            <p>カスタムプロンプトとお気に入りをJSONファイルに書き出したり、ファイルから読み込んだりできます。機種変更やブラウザ変更の前にエクスポートしておくと安心です。他の人が作ったプロンプトをインポートして共有することもできます。</p>
-            <p style={{ fontSize: '13px', color: 'var(--ink3)', marginTop: '6px' }}>インポート時は「追加」「マージ」「全て置き換え」の3つの方式から選べます。</p>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-              <button className="help-tour-btn" onClick={onExport}>エクスポート（書き出し）</button>
-              <label className="help-tour-btn" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
-                インポート（読み込み）
-                <input type="file" accept=".json" style={{ display: 'none' }} onChange={onImport} />
-              </label>
-            </div>
+            <p>カスタムプロンプトとお気に入りをJSONファイルに書き出したり、ファイルから読み込んだりできます。機種変更やブラウザ変更の前にエクスポートしておくと安心です。他の人のプロンプトをインポートして共有することもできます。</p>
+            <p style={{ fontSize: '13px', color: 'var(--ink3)', marginTop: '6px' }}>右上のデータアイコン（データベースマーク）からエクスポート・インポートを実行できます。インポート時は「追加」「マージ」「全て置き換え」の3方式から選べます。</p>
           </section>
 
           <section className="help-section help-reset-section">
@@ -1041,6 +1037,8 @@ export default function App() {
   const [runModal, setRunModal] = useState(null);
   const [helpModal, setHelpModal] = useState(false);
   const [importOptions, setImportOptions] = useState(null);
+  const [dataMenu, setDataMenu] = useState(false);
+  const dataMenuRef = useRef(null);
   const [page, setPage] = useState(0);
   const [nextId, setNextId] = useState(() => {
     try {
@@ -1133,6 +1131,18 @@ export default function App() {
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [introStep]);
+
+  // データメニュー: 外側クリックで閉じる
+  useEffect(() => {
+    if (!dataMenu) return;
+    const handleOutside = (e) => {
+      if (dataMenuRef.current && !dataMenuRef.current.contains(e.target)) {
+        setDataMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [dataMenu]);
 
   // ─── グローバルキーボードショートカット ───
   useEffect(() => {
@@ -1425,6 +1435,20 @@ export default function App() {
             <button className={`btn-icon ${darkMode ? 'active' : ''}`} onClick={()=>setDarkMode(!darkMode)}>{darkMode ? <Icons.Moon /> : <Icons.Sun />}</button>
             <button className={`btn-icon ${viewMode==='grid'?'active':''}`} onClick={()=>setViewMode('grid')}><Icons.Grid /></button>
             <button className={`btn-icon ${viewMode==='list'?'active':''}`} onClick={()=>setViewMode('list')}><Icons.List /></button>
+            <div className="data-menu-wrapper" ref={dataMenuRef}>
+              <button className={`btn-icon ${dataMenu ? 'active' : ''}`} onClick={() => setDataMenu(v => !v)} title="データのエクスポート・インポート"><Icons.Database /></button>
+              {dataMenu && (
+                <div className="data-menu-dropdown">
+                  <button className="data-menu-item" onClick={() => { handleExport(); setDataMenu(false); }}>
+                    <Icons.Download /> エクスポート（書き出し）
+                  </button>
+                  <label className="data-menu-item">
+                    <Icons.Upload /> インポート（読み込み）
+                    <input type="file" accept=".json" style={{ display: 'none' }} onChange={(e) => { handleImport(e); setDataMenu(false); }} />
+                  </label>
+                </div>
+              )}
+            </div>
             <button className="btn-icon" onClick={()=>setHelpModal(true)} title="ヘルプ・このアプリについて"><Icons.Help /></button>
             <button className="btn-icon btn-add" onClick={()=>setModal("add")}><Icons.Plus /> 追加</button>
           </div>
@@ -1570,7 +1594,7 @@ export default function App() {
           setSelectedAiTool={setSelectedAiTool}
         />
       )}
-      {helpModal && <HelpModal onClose={() => setHelpModal(false)} onStartTour={() => { setHelpModal(false); setIntroStep(0); }} onResetData={handleResetData} onExport={handleExport} onImport={handleImport} />}
+      {helpModal && <HelpModal onClose={() => setHelpModal(false)} onStartTour={() => { setHelpModal(false); setIntroStep(0); }} onResetData={handleResetData} />}
       {importOptions && <ImportOptionsModal data={importOptions} onConfirm={executeImport} onClose={() => setImportOptions(null)} />}
     </div>
   );

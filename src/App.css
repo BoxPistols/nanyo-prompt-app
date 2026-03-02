@@ -147,6 +147,45 @@ body.dark .header { background: rgba(15, 23, 42, 0.88); }
 }
 .btn-add:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
 
+/* ─── Data Menu Dropdown ─────────────────────────────────────────────────── */
+.data-menu-wrapper {
+  position: relative;
+}
+.data-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 6px;
+  min-width: 200px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.data-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--ink1);
+  text-align: left;
+  width: 100%;
+  transition: background 0.12s, color 0.12s;
+}
+.data-menu-item:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
 /* ─── Search ─────────────────────────────────────────────────────────────── */
 .search-container { padding: 20px 24px 8px; }
 .search-box { position: relative; max-width: 560px; margin: 0 auto; }
