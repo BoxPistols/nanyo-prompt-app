@@ -963,6 +963,33 @@ select.form-control:focus {
   padding: 20px 24px;
   border-bottom: 1px solid var(--border);
 }
+.modal-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--ink2);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.close-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
 .modal-header h2 {
   margin: 0;
   font-size: 17px;

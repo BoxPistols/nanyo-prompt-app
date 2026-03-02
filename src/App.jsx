@@ -291,7 +291,7 @@ const ExportPreviewModal = ({ prompts, favCount, onConfirm, onClose }) => {
   return createPortal(
     <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal import-options-modal">
-        <div className="modal-header">
+        <div className="modal-header-flex">
           <h2 style={{ fontSize: '18px', fontWeight: 700 }}>エクスポート確認</h2>
           <button className="close-btn" onClick={onClose} aria-label="閉じる">×</button>
         </div>
@@ -352,7 +352,7 @@ const ImportOptionsModal = ({ data, onConfirm, onClose }) => {
   return createPortal(
     <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal import-options-modal">
-        <div className="modal-header">
+        <div className="modal-header-flex">
           <h2 style={{ fontSize: '18px', fontWeight: 700 }}>インポート方式を選択</h2>
           <button className="close-btn" onClick={onClose} aria-label="閉じる">×</button>
         </div>
@@ -899,15 +899,23 @@ const CrudModal = ({ item, onSave, onDelete, onClose }) => {
     return Object.keys(parsed).length > 1;
   });
 
+  const isEdit = !!item;
+
+  const isDirty = !isEdit && (form.title || Object.values(sections).some(v => v?.trim()));
+
+  const handleClose = () => {
+    if (isDirty && !window.confirm("入力中の内容が失われます。閉じてよいですか？")) return;
+    onClose();
+  };
+
   useEffect(() => {
-    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    const handleEsc = (e) => { if (e.key === 'Escape') handleClose(); };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
+  }, [isDirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const setSec = (k, v) => setSections((s) => ({ ...s, [k]: v }));
-  const isEdit = !!item;
 
   const handleSubmit = () => {
     if (!form.title) return;
@@ -922,11 +930,14 @@ const CrudModal = ({ item, onSave, onDelete, onClose }) => {
   const detectedVars = [...new Set((bodyPreview.match(/\{([^}]+)\}/g) || []))];
 
   return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={handleClose}>
       <div className="modal crud-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{isEdit ? "プロンプトを編集" : "新規プロンプトを追加"}</h2>
-          <p>{isEdit ? `#${item.id} の内容を変更します` : "作成したプロンプトはこのブラウザに保存されます"}</p>
+        <div className="modal-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <div>
+            <h2>{isEdit ? "プロンプトを編集" : "新規プロンプトを追加"}</h2>
+            <p>{isEdit ? `#${item.id} の内容を変更します` : "作成したプロンプトはこのブラウザに保存されます"}</p>
+          </div>
+          <button className="close-btn" onClick={handleClose} aria-label="閉じる">×</button>
         </div>
         <div className="modal-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {!isEdit && (
