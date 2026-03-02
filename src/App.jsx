@@ -280,6 +280,47 @@ const HelpModal = ({ onClose, onStartTour, onResetData }) => {
   );
 };
 
+// ─── Modal: ExportPreviewModal ───────────────────────────────────────────────
+const ExportPreviewModal = ({ prompts, favCount, onConfirm, onClose }) => {
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal import-options-modal">
+        <div className="modal-header">
+          <h2 style={{ fontSize: '18px', fontWeight: 700 }}>エクスポート確認</h2>
+          <button className="close-btn" onClick={onClose} aria-label="閉じる">×</button>
+        </div>
+        <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--ink2)', margin: 0 }}>
+            以下 <strong>{prompts.length}件</strong>のカスタムプロンプト
+            {favCount > 0 ? <span>・お気に入り<strong>{favCount}件</strong></span> : null}
+            をJSONファイルに書き出します。
+          </p>
+          <div className="preview-list">
+            {prompts.map((p, i) => (
+              <div key={p.id ?? i} className="preview-list-item">
+                <span className="preview-list-title">{p.title || '（タイトルなし）'}</span>
+                {p.c1 && <span className="preview-list-cat">{p.c1}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="modal-actions" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)' }}>
+          <button className="btn-action btn-outline" onClick={onClose}>キャンセル</button>
+          <div style={{ flex: 1 }} />
+          <button className="btn-action btn-primary" onClick={onConfirm}>ダウンロード</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // ─── Modal: ImportOptionsModal ───────────────────────────────────────────────
 const IMPORT_MODES = [
   {
@@ -321,6 +362,14 @@ const ImportOptionsModal = ({ data, onConfirm, onClose }) => {
             {data.favorites?.length ? <span>・お気に入り<strong>{data.favorites.length}件</strong></span> : null}
             が含まれています。
           </p>
+          <div className="preview-list">
+            {data.prompts.map((p, i) => (
+              <div key={p.id ?? i} className="preview-list-item">
+                <span className="preview-list-title">{p.title || '（タイトルなし）'}</span>
+                {p.c1 && <span className="preview-list-cat">{p.c1}</span>}
+              </div>
+            ))}
+          </div>
           <div className="import-mode-list">
             {IMPORT_MODES.map(m => (
               <label key={m.value} className={`import-mode-item${mode === m.value ? ' selected' : ''}`}>
@@ -1037,6 +1086,7 @@ export default function App() {
   const [runModal, setRunModal] = useState(null);
   const [helpModal, setHelpModal] = useState(false);
   const [importOptions, setImportOptions] = useState(null);
+  const [exportPreview, setExportPreview] = useState(null);
   const [dataMenu, setDataMenu] = useState(false);
   const dataMenuRef = useRef(null);
   const [page, setPage] = useState(0);
@@ -1090,7 +1140,7 @@ export default function App() {
 
   // モーダル開閉に連動したスクロールロック
   useEffect(() => {
-    const isOpen = !!(modal || runModal || helpModal || importOptions);
+    const isOpen = !!(modal || runModal || helpModal || importOptions || exportPreview);
     if (!isOpen) return;
     const scrollY = window.scrollY;
     document.body.style.position = 'fixed';
@@ -1106,7 +1156,7 @@ export default function App() {
       document.body.style.overflow = '';
       window.scrollTo(0, scrollY);
     };
-  }, [modal, runModal, helpModal, importOptions]);
+  }, [modal, runModal, helpModal, importOptions, exportPreview]);
 
   // intro: 初回チェック（DOM描画後）
   useEffect(() => {
@@ -1287,6 +1337,11 @@ export default function App() {
 
   const handleExport = () => {
     const userPrompts = prompts.filter(p => p.isUser);
+    setExportPreview({ prompts: userPrompts, favCount: favs.size });
+  };
+
+  const doExport = () => {
+    const userPrompts = prompts.filter(p => p.isUser);
     const data = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -1301,6 +1356,7 @@ export default function App() {
     a.download = `nanyo-prompts-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setExportPreview(null);
   };
 
   const sanitizePrompt = (p) => ({
@@ -1435,6 +1491,7 @@ export default function App() {
             <button className={`btn-icon ${darkMode ? 'active' : ''}`} onClick={()=>setDarkMode(!darkMode)}>{darkMode ? <Icons.Moon /> : <Icons.Sun />}</button>
             <button className={`btn-icon ${viewMode==='grid'?'active':''}`} onClick={()=>setViewMode('grid')}><Icons.Grid /></button>
             <button className={`btn-icon ${viewMode==='list'?'active':''}`} onClick={()=>setViewMode('list')}><Icons.List /></button>
+            <button className="btn-icon" onClick={()=>setHelpModal(true)} title="ヘルプ・このアプリについて"><Icons.Help /></button>
             <div className="data-menu-wrapper" ref={dataMenuRef}>
               <button className={`btn-icon ${dataMenu ? 'active' : ''}`} onClick={() => setDataMenu(v => !v)} title="データのエクスポート・インポート"><Icons.Database /></button>
               {dataMenu && (
@@ -1449,7 +1506,6 @@ export default function App() {
                 </div>
               )}
             </div>
-            <button className="btn-icon" onClick={()=>setHelpModal(true)} title="ヘルプ・このアプリについて"><Icons.Help /></button>
             <button className="btn-icon btn-add" onClick={()=>setModal("add")}><Icons.Plus /> 追加</button>
           </div>
         </div>
@@ -1595,6 +1651,7 @@ export default function App() {
         />
       )}
       {helpModal && <HelpModal onClose={() => setHelpModal(false)} onStartTour={() => { setHelpModal(false); setIntroStep(0); }} onResetData={handleResetData} />}
+      {exportPreview && <ExportPreviewModal prompts={exportPreview.prompts} favCount={exportPreview.favCount} onConfirm={doExport} onClose={() => setExportPreview(null)} />}
       {importOptions && <ImportOptionsModal data={importOptions} onConfirm={executeImport} onClose={() => setImportOptions(null)} />}
     </div>
   );

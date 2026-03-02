@@ -179,6 +179,7 @@ body.dark .header { background: rgba(15, 23, 42, 0.88); }
   color: var(--ink1);
   text-align: left;
   width: 100%;
+  white-space: nowrap;
   transition: background 0.12s, color 0.12s;
 }
 .data-menu-item:hover {
@@ -1512,5 +1513,43 @@ body.dark .help-shortcuts kbd {
   font-size: 12px;
   color: var(--ink3);
   line-height: 1.5;
+}
+
+/* ─── Preview List (Export / Import) ────────────────────────────────────── */
+.preview-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg);
+}
+.preview-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  font-size: 13px;
+}
+.preview-list-item:hover {
+  background: var(--primary-light);
+}
+.preview-list-title {
+  color: var(--ink1);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preview-list-cat {
+  font-size: 11px;
+  color: var(--ink3);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
