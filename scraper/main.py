@@ -7,8 +7,10 @@ from tqdm import tqdm
 import os
 
 # ─── 設定 ─────────────────────────────────────────────────────────────────────
-INPUT_FILE = "raw_data.json"
-OUTPUT_FILE = "nanyo_prompts_full.json"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+INPUT_FILE = os.path.join(PROJECT_ROOT, "src", "data", "raw_data.json")
+OUTPUT_FILE = os.path.join(PROJECT_ROOT, "src", "data", "contents.json")
 SLEEP_TIME = 1.5
 
 def get_url(link_id):
