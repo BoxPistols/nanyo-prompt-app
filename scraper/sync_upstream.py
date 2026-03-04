@@ -84,10 +84,13 @@ def get_upstream_tree():
 
         sha = item.get("sha", "")
 
-        # ID分類
+        # ID分類（ゼロパディング正規化: 001→1, 099→99）
         if re.match(r"^\d+[a-z]?$", name):
-            # 数値ID (573b等の特殊ケースも含む)
-            prompt_files[name] = {"file": path, "sha": sha, "name": name}
+            # 数値ID (001, 099, 573b等)
+            normalized = str(int(re.match(r"^(\d+)", name).group(1)))
+            suffix = re.sub(r"^\d+", "", name)  # "b" in "573b"
+            key = normalized + suffix
+            prompt_files[key] = {"file": path, "sha": sha, "name": name}
         elif re.match(r"^S\d+$", name):
             prompt_files[name] = {"file": path, "sha": sha, "name": name}
         elif re.match(r"^d\d+$", name):
@@ -138,7 +141,7 @@ def get_link_id_map(raw_data):
 
 
 def upstream_name_to_link_id(name):
-    """上流ファイル名からアプリ内のlink_idに変換"""
+    """上流ファイル名（正規化済み）からアプリ内のlink_idに変換"""
     # 数値のみ → "G{num}" (770以上) or "{num}" (769以下)
     if re.match(r"^\d+$", name):
         num = int(name)
@@ -153,10 +156,15 @@ def upstream_name_to_link_id(name):
 
 
 def link_id_to_upstream_name(link_id):
-    """アプリ内のlink_idから上流ファイル名に逆変換"""
+    """アプリ内のlink_idから上流ファイル名（正規化済み）に逆変換"""
     s = str(link_id)
     if s.startswith("G"):
-        return s[1:]  # G717 → 717
+        num = s[1:]
+        if num.isdigit():
+            return str(int(num))  # G717 → 717
+        return num
+    if s.isdigit():
+        return str(int(s))  # ゼロパディング正規化: 001 → 1
     return s
 
 
@@ -246,9 +254,9 @@ def detect_changes(upstream_tree, prev_meta, raw_data):
             added.append({"link_id": lid, "name": name, "info": upstream_tree[name]})
 
     # ─── 削除検知 ───
-    # G-prefix, S, d のプロンプトで上流に存在しないものを検出
+    # 全link_id（数値・G-prefix・S・d）で上流に存在しないものを検出
     deleted = []
-    trackable_ids = current_g_link_ids | current_special_link_ids
+    trackable_ids = all_current_link_ids
     for lid in trackable_ids:
         if lid not in upstream_link_ids:
             deleted.append({"link_id": lid, "index": link_id_map.get(lid)})
