@@ -859,6 +859,20 @@ const PROMPT_SEEDS = [
       variables: "会議メモ",
     },
   },
+  {
+    name: "UI/UXデザイン",
+    title: "UI/UXデザインのレビュー・改善提案プロンプト",
+    c1: "アイデア創出・企画",
+    c2: "アイデア創出・企画",
+    sections: {
+      purpose: "Webサイトやアプリの画面デザインについて、ユーザビリティやアクセシビリティの観点から改善点を洗い出し、具体的な改善案を提示する。",
+      role: "あなたはUI/UXデザインの専門家です。ユーザー中心設計（UCD）、アクセシビリティ（WCAG）、マテリアルデザインなどのデザインシステムに精通し、使いやすさと視覚的な美しさを両立する提案ができます。",
+      instructions: "{対象画面の説明}について、以下の観点からUI/UXデザインのレビューを行い、改善案を提示してください。\n\n1. ユーザビリティ（操作性・学習しやすさ）\n2. 視覚的な階層構造（情報の優先度が伝わるか）\n3. アクセシビリティ（色のコントラスト、フォントサイズ、操作対象のサイズ）\n4. レスポンシブ対応（モバイル・タブレットでの表示）\n5. インタラクション（ホバー、フィードバック、遷移のアニメーション）",
+      rules: "- 問題点だけでなく、良い点も指摘する\n- 各指摘に具体的な修正案（CSSやコンポーネントの例）を添える\n- 改善の優先度（高/中/低）を明記する\n- 対象ユーザー層を考慮した提案をする",
+      output: "## デザインレビュー概要\n（全体的な印象と評価）\n\n## 良い点\n- ...\n\n## 改善提案\n| # | 優先度 | カテゴリ | 指摘内容 | 改善案 |\n\n## 参考デザインパターン\n（推奨するデザインパターンや参考例）",
+      variables: "対象画面の説明",
+    },
+  },
 ];
 
 const buildBody = (sections) => {
@@ -1510,12 +1524,12 @@ export default function App() {
             <p>生成AI活用実例集 {prompts.length}件</p>
           </div>
           <div className="header-controls">
-            <button className={`btn-icon ${darkMode ? 'active' : ''}`} onClick={()=>setDarkMode(!darkMode)}>{darkMode ? <Icons.Moon /> : <Icons.Sun />}</button>
-            <button className={`btn-icon ${viewMode==='grid'?'active':''}`} onClick={()=>setViewMode('grid')}><Icons.Grid /></button>
-            <button className={`btn-icon ${viewMode==='list'?'active':''}`} onClick={()=>setViewMode('list')}><Icons.List /></button>
-            <button className="btn-icon" onClick={()=>setHelpModal(true)} title="ヘルプ・このアプリについて"><Icons.Help /></button>
+            <button className={`btn-icon ${darkMode ? 'active' : ''}`} onClick={()=>setDarkMode(!darkMode)} data-tip={darkMode ? 'ライトモードに切替（D）' : 'ダークモードに切替（D）'}>{darkMode ? <Icons.Moon /> : <Icons.Sun />}</button>
+            <button className={`btn-icon ${viewMode==='grid'?'active':''}`} onClick={()=>setViewMode('grid')} data-tip="グリッド表示（G）"><Icons.Grid /></button>
+            <button className={`btn-icon ${viewMode==='list'?'active':''}`} onClick={()=>setViewMode('list')} data-tip="リスト表示（L）"><Icons.List /></button>
+            <button className="btn-icon" onClick={()=>setHelpModal(true)} data-tip="ヘルプ（?）"><Icons.Help /></button>
             <div className="data-menu-wrapper" ref={dataMenuRef}>
-              <button className={`btn-icon ${dataMenu ? 'active' : ''}`} onClick={() => setDataMenu(v => !v)} title="データのエクスポート・インポート"><Icons.Database /></button>
+              <button className={`btn-icon ${dataMenu ? 'active' : ''}`} onClick={() => setDataMenu(v => !v)} data-tip="データ管理"><Icons.Database /></button>
               {dataMenu && (
                 <div className="data-menu-dropdown">
                   <button className="data-menu-item" onClick={() => { handleExport(); setDataMenu(false); }}>
@@ -1528,7 +1542,7 @@ export default function App() {
                 </div>
               )}
             </div>
-            <button className="btn-icon btn-add" onClick={()=>setModal("add")}><Icons.Plus /> 追加</button>
+            <button className="btn-icon btn-add" onClick={()=>setModal("add")} data-tip="自分のプロンプトを追加"><Icons.Plus /> 追加</button>
           </div>
         </div>
       </header>
