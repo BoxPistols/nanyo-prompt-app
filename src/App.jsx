@@ -1638,7 +1638,7 @@ export default function App() {
                   {p.url && /^https?:\/\//i.test(p.url) ? (
                     <a href={p.url} target="_blank" rel="noopener noreferrer" className="btn-action btn-outline"><Icons.External /> 公式</a>
                   ) : (
-                    <a href={p.searchUrl} target="_blank" rel="noopener noreferrer" className="btn-action btn-outline"><Icons.Search /> 検索</a>
+                    <a href={p.isUser ? `https://www.google.com/search?q=${encodeURIComponent(p.title)}` : p.searchUrl} target="_blank" rel="noopener noreferrer" className="btn-action btn-outline"><Icons.Search /> Google検索</a>
                   )}
                   <button className="btn-action btn-primary" onClick={() => setRunModal(p)}><Icons.Ai /> AIで実行</button>
                 </div>
