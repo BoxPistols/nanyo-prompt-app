@@ -4,6 +4,7 @@ import "./App.css";
 import { RAW, INITIAL_PROMPTS } from "./data/prompts";
 import contentsData from "./data/contents.json";
 import { searchPrompts, SEARCH_MODES } from "./utils/search";
+import { mergePrompts } from "./syncLogic";
 
 // ─── Constants & Helpers ───────────────────────────────────────────────────
 const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -1073,19 +1074,11 @@ export default function App() {
       const savedData = localStorage.getItem(STORAGE_KEY + "_data");
       if (savedData) {
         const localPrompts = JSON.parse(savedData);
-        const localSource = localPrompts.filter(p => !p.isUser);
-        const userPrompts = localPrompts.filter(p => p.isUser);
-        const initialIds = new Set(INITIAL_PROMPTS.map(p => p.id));
-        const localSourceIds = new Set(localSource.map(p => p.id));
-        const hasChanged = initialIds.size !== localSourceIds.size ||
-          [...initialIds].some(id => !localSourceIds.has(id));
-        if (hasChanged) {
-          // ソースデータが変更された場合: ユーザー追加分を保持しつつソースを入れ替え
-          const merged = [...userPrompts, ...INITIAL_PROMPTS];
-          localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(merged));
-          return merged;
+        const result = mergePrompts(localPrompts, INITIAL_PROMPTS);
+        if (result.hasChanged) {
+          localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(result.prompts));
         }
-        return localPrompts;
+        return result.prompts;
       }
       return INITIAL_PROMPTS;
     } catch(e) { console.error(e); return INITIAL_PROMPTS; }
