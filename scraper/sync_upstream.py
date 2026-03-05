@@ -152,14 +152,6 @@ def upstream_name_to_link_id(name):
     return name
 
 
-def link_id_to_upstream_name(link_id):
-    """アプリ内のlink_idから上流ファイル名に逆変換"""
-    s = str(link_id)
-    if s.startswith("G"):
-        return s[1:]  # G717 → 717
-    return s
-
-
 def fetch_prompt_page(file_path):
     """上流HTMLページからタイトルと本文を取得"""
     url = f"{RAW_CONTENT_BASE}/{file_path}"
@@ -216,7 +208,6 @@ def fetch_prompt_page(file_path):
 
 def detect_changes(upstream_tree, prev_meta, raw_data):
     """上流と現在のデータを比較して変更を検出する"""
-    link_id_map = get_link_id_map(raw_data)
 
     # 上流の全ファイル名 → link_id マッピング
     upstream_link_ids = {}
@@ -251,7 +242,7 @@ def detect_changes(upstream_tree, prev_meta, raw_data):
     trackable_ids = current_g_link_ids | current_special_link_ids
     for lid in trackable_ids:
         if lid not in upstream_link_ids:
-            deleted.append({"link_id": lid, "index": link_id_map.get(lid)})
+            deleted.append({"link_id": lid})
 
     # ─── 更新検知（SHA比較） ───
     updated = []
@@ -267,7 +258,6 @@ def detect_changes(upstream_tree, prev_meta, raw_data):
                 "link_id": lid,
                 "name": name,
                 "info": upstream_tree[name],
-                "index": link_id_map.get(lid)
             })
 
     return added, deleted, updated
@@ -315,26 +305,26 @@ def apply_deletions(deleted, raw_data, contents):
     if not deleted:
         return 0
 
-    # 削除対象のインデックスを逆順でソート（後ろから削除）
-    indices_to_remove = []
+    # link_idベースで削除対象を特定（インデックスに依存しない）
+    delete_link_ids = set(item["link_id"] for item in deleted)
     ids_to_remove = set()
+    count = 0
 
-    for item in deleted:
-        idx = item.get("index")
-        if idx is not None:
-            indices_to_remove.append(idx)
-            ids_to_remove.add(str(raw_data[idx][0]))
-            log(f"  削除: link_id={item['link_id']}, title='{raw_data[idx][1]}'")
+    for item in raw_data:
+        lid = str(item[2])
+        if lid in delete_link_ids:
+            ids_to_remove.add(str(item[0]))
+            log(f"  削除: link_id={lid}, title='{item[1]}'")
+            count += 1
 
-    # raw_dataから削除（逆順）
-    for idx in sorted(indices_to_remove, reverse=True):
-        raw_data.pop(idx)
+    # raw_dataからlink_idが一致するものをフィルタ除去
+    raw_data[:] = [item for item in raw_data if str(item[2]) not in delete_link_ids]
 
     # contentsから削除
     for rid in ids_to_remove:
         contents.pop(rid, None)
 
-    return len(indices_to_remove)
+    return count
 
 
 def apply_updates(updated, raw_data, contents):
@@ -342,10 +332,14 @@ def apply_updates(updated, raw_data, contents):
     if not updated:
         return 0
 
+    # 削除後にインデックスがずれるため、link_idでraw_dataを検索する
+    link_id_map = get_link_id_map(raw_data)
+
     count = 0
     for i, item in enumerate(updated):
         file_path = item["info"]["file"]
-        idx = item.get("index")
+        link_id = item["link_id"]
+        idx = link_id_map.get(link_id)
         log(f"  更新 [{i+1}/{len(updated)}] {file_path} ...", )
 
         result = fetch_prompt_page(file_path)
@@ -373,6 +367,8 @@ def apply_updates(updated, raw_data, contents):
                     log(f"    本文更新: ID={rid}")
 
             count += 1
+        else:
+            log(f"    SKIP (link_id={link_id} が見つかりません)")
         time.sleep(SLEEP_TIME)
 
     return count

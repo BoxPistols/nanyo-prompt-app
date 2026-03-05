@@ -134,44 +134,46 @@ body.dark .header { background: rgba(15, 23, 42, 0.88); }
 .btn-icon:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
 .btn-icon.active { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
 
-/* マテリアルデザイン風カスタムtooltip */
-.btn-icon[data-tip] { position: relative; }
-.btn-icon[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) scale(0.92);
-  background: rgba(33, 33, 33, 0.92);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.4;
-  padding: 6px 12px;
-  border-radius: 6px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 1000;
-  letter-spacing: 0.01em;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-.btn-icon[data-tip]:hover::after {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-  transition-delay: 0.4s;
-}
-/* 右端のボタンは左寄せで表示 */
-.btn-add[data-tip]::after,
-.data-menu-wrapper .btn-icon[data-tip]::after {
-  left: auto;
-  right: 0;
-  transform: translateX(0) scale(0.92);
-}
-.btn-add[data-tip]:hover::after,
-.data-menu-wrapper .btn-icon[data-tip]:hover::after {
-  transform: translateX(0) scale(1);
+/* マテリアルデザイン風カスタムtooltip（ホバー可能なデバイスのみ） */
+@media (hover: hover) and (pointer: fine) {
+  .btn-icon[data-tip] { position: relative; }
+  .btn-icon[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.92);
+    background: rgba(33, 33, 33, 0.92);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    padding: 6px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 1000;
+    letter-spacing: 0.01em;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .btn-icon[data-tip]:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+    transition-delay: 0.4s;
+  }
+  /* 右端のボタンは左寄せで表示 */
+  .btn-add[data-tip]::after,
+  .data-menu-wrapper .btn-icon[data-tip]::after {
+    left: auto;
+    right: 0;
+    transform: translateX(0) scale(0.92);
+  }
+  .btn-add[data-tip]:hover::after,
+  .data-menu-wrapper .btn-icon[data-tip]:hover::after {
+    transform: translateX(0) scale(1);
+  }
 }
 
 .btn-add {
