@@ -4,7 +4,7 @@ import "./App.css";
 import { RAW, INITIAL_PROMPTS } from "./data/prompts";
 import contentsData from "./data/contents.json";
 import { searchPrompts, SEARCH_MODES } from "./utils/search";
-import { mergePrompts } from "./syncLogic";
+import { mergePrompts, cleanFavs } from "./syncLogic";
 
 // ─── Constants & Helpers ───────────────────────────────────────────────────
 const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -1091,6 +1091,19 @@ export default function App() {
         const result = mergePrompts(localPrompts, INITIAL_PROMPTS);
         if (result.hasChanged) {
           localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(result.prompts));
+          // 削除されたプロンプトのお気に入りをクリーンアップ
+          if (result.removedIds.length > 0) {
+            try {
+              const savedFavs = localStorage.getItem(STORAGE_KEY + "_favs");
+              if (savedFavs) {
+                const favSet = new Set(JSON.parse(savedFavs));
+                const { favs: cleanedFavs, cleaned } = cleanFavs(favSet, result.removedIds);
+                if (cleaned > 0) {
+                  localStorage.setItem(STORAGE_KEY + "_favs", JSON.stringify([...cleanedFavs]));
+                }
+              }
+            } catch {}
+          }
         }
         return result.prompts;
       }

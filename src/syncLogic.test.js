@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mergePrompts } from "./syncLogic";
+import { mergePrompts, cleanFavs } from "./syncLogic";
 
 // ヘルパー: ソースプロンプトを作成
 const makeSource = (id, title = `Prompt ${id}`) => ({
@@ -144,5 +144,60 @@ describe("mergePrompts", () => {
       expect(result.prompts).toHaveLength(1);
       expect(result.prompts[0].isUser).toBe(true);
     });
+  });
+
+  describe("removedIds", () => {
+    it("削除されたソースIDがremovedIdsに含まれる", () => {
+      const local = [makeSource(1), makeSource(2), makeSource(3)];
+      const newSource = [makeSource(1)];
+
+      const result = mergePrompts(local, newSource);
+
+      expect(result.removedIds).toContain(2);
+      expect(result.removedIds).toContain(3);
+      expect(result.removedIds).not.toContain(1);
+    });
+
+    it("変更がない場合はremovedIdsが空", () => {
+      const local = [makeSource(1), makeSource(2)];
+      const newSource = [makeSource(1), makeSource(2)];
+
+      const result = mergePrompts(local, newSource);
+
+      expect(result.removedIds).toEqual([]);
+    });
+  });
+});
+
+describe("cleanFavs", () => {
+  it("削除されたプロンプトのお気に入りを除去する", () => {
+    const favs = new Set([1, 2, 3, 4]);
+    const removedIds = [2, 4];
+
+    const result = cleanFavs(favs, removedIds);
+
+    expect(result.cleaned).toBe(2);
+    expect(result.favs.has(1)).toBe(true);
+    expect(result.favs.has(3)).toBe(true);
+    expect(result.favs.has(2)).toBe(false);
+    expect(result.favs.has(4)).toBe(false);
+  });
+
+  it("該当するお気に入りがない場合は元のセットを返す", () => {
+    const favs = new Set([1, 3]);
+    const removedIds = [2, 4];
+
+    const result = cleanFavs(favs, removedIds);
+
+    expect(result.cleaned).toBe(0);
+    expect(result.favs).toBe(favs); // 同一参照
+  });
+
+  it("removedIdsが空なら何もしない", () => {
+    const favs = new Set([1, 2]);
+    const result = cleanFavs(favs, []);
+
+    expect(result.cleaned).toBe(0);
+    expect(result.favs).toBe(favs);
   });
 });

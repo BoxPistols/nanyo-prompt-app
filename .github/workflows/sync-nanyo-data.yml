@@ -34,7 +34,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          git diff --quiet src/data/ && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+          git diff --quiet src/data/ scraper/upstream_meta.json && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Build PR body from sync report
         if: steps.changes.outputs.changed == 'true'

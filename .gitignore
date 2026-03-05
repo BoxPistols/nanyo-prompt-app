@@ -26,6 +26,9 @@ dist-ssr
 # AI
 .claude/settings.local.json
 
+# Sync
+scraper/sync_report.json
+
 # Python
 __pycache__/
 *.pyc
