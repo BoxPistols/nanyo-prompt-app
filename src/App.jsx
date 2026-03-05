@@ -4,6 +4,7 @@ import "./App.css";
 import { RAW, INITIAL_PROMPTS } from "./data/prompts";
 import contentsData from "./data/contents.json";
 import { searchPrompts, SEARCH_MODES } from "./utils/search";
+import { mergePrompts, cleanFavs } from "./syncLogic";
 
 // ─── Constants & Helpers ───────────────────────────────────────────────────
 const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -858,6 +859,20 @@ const PROMPT_SEEDS = [
       variables: "会議メモ",
     },
   },
+  {
+    name: "UI/UXデザイン",
+    title: "UI/UXデザインのレビュー・改善提案プロンプト",
+    c1: "アイデア創出・企画",
+    c2: "アイデア創出・企画",
+    sections: {
+      purpose: "Webサイトやアプリの画面デザインについて、ユーザビリティやアクセシビリティの観点から改善点を洗い出し、具体的な改善案を提示する。",
+      role: "あなたはUI/UXデザインの専門家です。ユーザー中心設計（UCD）、アクセシビリティ（WCAG）、マテリアルデザインなどのデザインシステムに精通し、使いやすさと視覚的な美しさを両立する提案ができます。",
+      instructions: "{対象画面の説明}について、以下の観点からUI/UXデザインのレビューを行い、改善案を提示してください。\n\n1. ユーザビリティ（操作性・学習しやすさ）\n2. 視覚的な階層構造（情報の優先度が伝わるか）\n3. アクセシビリティ（色のコントラスト、フォントサイズ、操作対象のサイズ）\n4. レスポンシブ対応（モバイル・タブレットでの表示）\n5. インタラクション（ホバー、フィードバック、遷移のアニメーション）",
+      rules: "- 問題点だけでなく、良い点も指摘する\n- 各指摘に具体的な修正案（CSSやコンポーネントの例）を添える\n- 改善の優先度（高/中/低）を明記する\n- 対象ユーザー層を考慮した提案をする",
+      output: "## デザインレビュー概要\n（全体的な印象と評価）\n\n## 良い点\n- ...\n\n## 改善提案\n| # | 優先度 | カテゴリ | 指摘内容 | 改善案 |\n\n## 参考デザインパターン\n（推奨するデザインパターンや参考例）",
+      variables: "対象画面の説明",
+    },
+  },
 ];
 
 const buildBody = (sections) => {
@@ -1073,14 +1088,24 @@ export default function App() {
       const savedData = localStorage.getItem(STORAGE_KEY + "_data");
       if (savedData) {
         const localPrompts = JSON.parse(savedData);
-        if (INITIAL_PROMPTS.length > localPrompts.filter(p => !p.isUser).length) {
-          const localIds = new Set(localPrompts.map(p => p.id));
-          const newFromSource = INITIAL_PROMPTS.filter(p => !localIds.has(p.id));
-          const merged = [...localPrompts, ...newFromSource];
-          localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(merged));
-          return merged;
+        const result = mergePrompts(localPrompts, INITIAL_PROMPTS);
+        if (result.hasChanged) {
+          localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(result.prompts));
+          // 削除されたプロンプトのお気に入りをクリーンアップ
+          if (result.removedIds.length > 0) {
+            try {
+              const savedFavs = localStorage.getItem(STORAGE_KEY + "_favs");
+              if (savedFavs) {
+                const favSet = new Set(JSON.parse(savedFavs));
+                const { favs: cleanedFavs, cleaned } = cleanFavs(favSet, result.removedIds);
+                if (cleaned > 0) {
+                  localStorage.setItem(STORAGE_KEY + "_favs", JSON.stringify([...cleanedFavs]));
+                }
+              }
+            } catch {}
+          }
         }
-        return localPrompts;
+        return result.prompts;
       }
       return INITIAL_PROMPTS;
     } catch(e) { console.error(e); return INITIAL_PROMPTS; }
@@ -1512,12 +1537,12 @@ export default function App() {
             <p>生成AI活用実例集 {prompts.length}件</p>
           </div>
           <div className="header-controls">
-            <button className={`btn-icon ${darkMode ? 'active' : ''}`} onClick={()=>setDarkMode(!darkMode)}>{darkMode ? <Icons.Moon /> : <Icons.Sun />}</button>
-            <button className={`btn-icon ${viewMode==='grid'?'active':''}`} onClick={()=>setViewMode('grid')}><Icons.Grid /></button>
-            <button className={`btn-icon ${viewMode==='list'?'active':''}`} onClick={()=>setViewMode('list')}><Icons.List /></button>
-            <button className="btn-icon" onClick={()=>setHelpModal(true)} title="ヘルプ・このアプリについて"><Icons.Help /></button>
+            <button className={`btn-icon ${darkMode ? 'active' : ''}`} onClick={()=>setDarkMode(!darkMode)} data-tip={darkMode ? 'ライトモードに切替（D）' : 'ダークモードに切替（D）'}>{darkMode ? <Icons.Moon /> : <Icons.Sun />}</button>
+            <button className={`btn-icon ${viewMode==='grid'?'active':''}`} onClick={()=>setViewMode('grid')} data-tip="グリッド表示（G）"><Icons.Grid /></button>
+            <button className={`btn-icon ${viewMode==='list'?'active':''}`} onClick={()=>setViewMode('list')} data-tip="リスト表示（L）"><Icons.List /></button>
+            <button className="btn-icon" onClick={()=>setHelpModal(true)} data-tip="ヘルプ（?）"><Icons.Help /></button>
             <div className="data-menu-wrapper" ref={dataMenuRef}>
-              <button className={`btn-icon ${dataMenu ? 'active' : ''}`} onClick={() => setDataMenu(v => !v)} title="データのエクスポート・インポート"><Icons.Database /></button>
+              <button className={`btn-icon ${dataMenu ? 'active' : ''}`} onClick={() => setDataMenu(v => !v)} data-tip="データ管理"><Icons.Database /></button>
               {dataMenu && (
                 <div className="data-menu-dropdown">
                   <button className="data-menu-item" onClick={() => { handleExport(); setDataMenu(false); }}>
@@ -1530,7 +1555,7 @@ export default function App() {
                 </div>
               )}
             </div>
-            <button className="btn-icon btn-add" onClick={()=>setModal("add")}><Icons.Plus /> 追加</button>
+            <button className="btn-icon btn-add" onClick={()=>setModal("add")} data-tip="自分のプロンプトを追加"><Icons.Plus /> 追加</button>
           </div>
         </div>
       </header>
@@ -1613,7 +1638,7 @@ export default function App() {
                   {p.url && /^https?:\/\//i.test(p.url) ? (
                     <a href={p.url} target="_blank" rel="noopener noreferrer" className="btn-action btn-outline"><Icons.External /> 公式</a>
                   ) : (
-                    <a href={p.searchUrl} target="_blank" rel="noopener noreferrer" className="btn-action btn-outline"><Icons.Search /> 検索</a>
+                    <a href={p.isUser ? `https://www.google.com/search?q=${encodeURIComponent(p.title)}` : p.searchUrl} target="_blank" rel="noopener noreferrer" className="btn-action btn-outline"><Icons.Search /> Google検索</a>
                   )}
                   <button className="btn-action btn-primary" onClick={() => setRunModal(p)}><Icons.Ai /> AIで実行</button>
                 </div>
