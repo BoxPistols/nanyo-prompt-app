@@ -1075,8 +1075,11 @@ export default function App() {
         const localPrompts = JSON.parse(savedData);
         const localSource = localPrompts.filter(p => !p.isUser);
         const userPrompts = localPrompts.filter(p => p.isUser);
-        const sourceIds = new Set(INITIAL_PROMPTS.map(p => p.id));
-        if (INITIAL_PROMPTS.length !== localSource.length) {
+        const initialIds = new Set(INITIAL_PROMPTS.map(p => p.id));
+        const localSourceIds = new Set(localSource.map(p => p.id));
+        const hasChanged = initialIds.size !== localSourceIds.size ||
+          [...initialIds].some(id => !localSourceIds.has(id));
+        if (hasChanged) {
           // ソースデータが変更された場合: ユーザー追加分を保持しつつソースを入れ替え
           const merged = [...userPrompts, ...INITIAL_PROMPTS];
           localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(merged));
