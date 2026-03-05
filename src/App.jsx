@@ -1073,10 +1073,12 @@ export default function App() {
       const savedData = localStorage.getItem(STORAGE_KEY + "_data");
       if (savedData) {
         const localPrompts = JSON.parse(savedData);
-        if (INITIAL_PROMPTS.length > localPrompts.filter(p => !p.isUser).length) {
-          const localIds = new Set(localPrompts.map(p => p.id));
-          const newFromSource = INITIAL_PROMPTS.filter(p => !localIds.has(p.id));
-          const merged = [...localPrompts, ...newFromSource];
+        const localSource = localPrompts.filter(p => !p.isUser);
+        const userPrompts = localPrompts.filter(p => p.isUser);
+        const sourceIds = new Set(INITIAL_PROMPTS.map(p => p.id));
+        if (INITIAL_PROMPTS.length !== localSource.length) {
+          // ソースデータが変更された場合: ユーザー追加分を保持しつつソースを入れ替え
+          const merged = [...userPrompts, ...INITIAL_PROMPTS];
           localStorage.setItem(STORAGE_KEY + "_data", JSON.stringify(merged));
           return merged;
         }
