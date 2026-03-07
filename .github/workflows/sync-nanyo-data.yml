@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   sync:
@@ -36,90 +35,11 @@ jobs:
         run: |
           git diff --quiet src/data/ scraper/upstream_meta.json && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
 
-      - name: Build PR body from sync report
+      - name: Commit and push
         if: steps.changes.outputs.changed == 'true'
-        id: report
         run: |
-          if [ -f scraper/sync_report.json ]; then
-            ADDED=$(python3 -c "import json; r=json.load(open('scraper/sync_report.json')); print(r['summary']['added'])")
-            DELETED=$(python3 -c "import json; r=json.load(open('scraper/sync_report.json')); print(r['summary']['deleted'])")
-            UPDATED=$(python3 -c "import json; r=json.load(open('scraper/sync_report.json')); print(r['summary']['updated'])")
-            TIMESTAMP=$(python3 -c "import json; r=json.load(open('scraper/sync_report.json')); print(r['timestamp'])")
-
-            # Build details
-            ADDED_DETAILS=$(python3 -c "
-          import json
-          r=json.load(open('scraper/sync_report.json'))
-          for a in r['details']['added'][:20]:
-              print(f\"- \`{a['link_id']}\` ({a['file']})\")
-          " || echo "- (詳細なし)")
-
-            DELETED_DETAILS=$(python3 -c "
-          import json
-          r=json.load(open('scraper/sync_report.json'))
-          for d in r['details']['deleted'][:20]:
-              print(f\"- \`{d['link_id']}\`\")
-          " || echo "- (詳細なし)")
-
-            UPDATED_DETAILS=$(python3 -c "
-          import json
-          r=json.load(open('scraper/sync_report.json'))
-          for u in r['details']['updated'][:20]:
-              print(f\"- \`{u['link_id']}\` ({u['file']})\")
-          " || echo "- (詳細なし)")
-
-            echo "added=$ADDED" >> $GITHUB_OUTPUT
-            echo "deleted=$DELETED" >> $GITHUB_OUTPUT
-            echo "updated=$UPDATED" >> $GITHUB_OUTPUT
-            echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
-
-            # Multi-line body
-            {
-              echo "body<<BODY_EOF"
-              echo "## 自動同期レポート"
-              echo ""
-              echo "上流リポジトリ [nanyo-line/prompt](https://github.com/nanyo-line/prompt) との同期結果:"
-              echo ""
-              echo "| 種別 | 件数 |"
-              echo "|------|------|"
-              echo "| 追加 | ${ADDED} 件 |"
-              echo "| 削除 | ${DELETED} 件 |"
-              echo "| 更新 | ${UPDATED} 件 |"
-              echo ""
-              if [ "$ADDED" != "0" ]; then
-                echo "### 追加されたプロンプト"
-                echo "$ADDED_DETAILS"
-                echo ""
-              fi
-              if [ "$DELETED" != "0" ]; then
-                echo "### 削除されたプロンプト"
-                echo "$DELETED_DETAILS"
-                echo ""
-              fi
-              if [ "$UPDATED" != "0" ]; then
-                echo "### 更新されたプロンプト"
-                echo "$UPDATED_DETAILS"
-                echo ""
-              fi
-              echo "### 変更ファイル"
-              echo "- \`src/data/raw_data.json\` - プロンプトメタデータ"
-              echo "- \`src/data/contents.json\` - プロンプト本文"
-              echo ""
-              echo "> このPRは GitHub Actions の定期実行により自動作成されました。"
-              echo "> 同期日時: ${TIMESTAMP}"
-              echo "BODY_EOF"
-            } >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create Pull Request
-        if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "feat: sync Nanyo prompt data (+${{ steps.report.outputs.added }} -${{ steps.report.outputs.deleted }} ~${{ steps.report.outputs.updated }})"
-          title: "feat: 南陽市プロンプトデータ自動同期 (+${{ steps.report.outputs.added }} -${{ steps.report.outputs.deleted }} ~${{ steps.report.outputs.updated }})"
-          body: ${{ steps.report.outputs.body }}
-          branch: auto/sync-nanyo-data
-          labels: |
-            automated
-            data-update
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/ scraper/upstream_meta.json
+          git commit -m "feat: sync Nanyo City prompt data (auto-update)"
+          git push
