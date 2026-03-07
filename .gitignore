@@ -24,7 +24,11 @@ dist-ssr
 *.sw?
 
 # AI
+CLAUDE.md
 .claude/settings.local.json
+
+# Legacy data
+Prompt748/
 
 # Sync
 scraper/sync_report.json
