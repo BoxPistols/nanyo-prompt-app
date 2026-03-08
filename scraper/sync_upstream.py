@@ -237,9 +237,9 @@ def detect_changes(upstream_tree, prev_meta, raw_data):
             added.append({"link_id": lid, "name": name, "info": upstream_tree[name]})
 
     # ─── 削除検知 ───
-    # G-prefix, S, d のプロンプトで上流に存在しないものを検出
+    # 全てのプロンプトで上流に存在しないものを検出
     deleted = []
-    trackable_ids = current_g_link_ids | current_special_link_ids
+    trackable_ids = all_current_link_ids
     for lid in trackable_ids:
         if lid not in upstream_link_ids:
             deleted.append({"link_id": lid})
