@@ -1,5 +1,5 @@
 ---
-title: "自治体が本気で公開した764件のAIプロンプト集を、誰でも使えるWebアプリにした話"
+title: "自治体が本気で公開した764件のAIプロンプト集を、誰でも使えるWebアプリにした話【React 19 × 日本語スマート検索】"
 emoji: "🏛️"
 type: "tech"
 topics: ["react", "生成AI", "プロンプト", "自治体DX", "オープンデータ"]
@@ -7,11 +7,9 @@ published: false
 ---
 
 :::message
-**タイトル候補（掲載時に1つを選定）**
-
-1. **自治体が本気で公開した764件のAIプロンプト集を、誰でも使えるWebアプリにした話【React 19 × 日本語スマート検索】**
-2. **人口3万人の町が生成AIプロンプト764件をオープンデータ化 ── その"使える化"アプリを個人開発した全記録**
-3. **日本語あいまい検索・同義語展開・N-gram類似度 ── 764件のAIプロンプトを"見つけられる"検索エンジンをReactで作った**
+**タイトル候補（参考）**
+- 案2: 人口3万人の町が生成AIプロンプト764件をオープンデータ化 ── その"使える化"アプリを個人開発した全記録
+- 案3: 日本語あいまい検索・同義語展開・N-gram類似度 ── 764件のAIプロンプトを"見つけられる"検索エンジンをReactで作った
 :::
 
 ## はじめに ── ある日、自治体が764件のAIプロンプトをGitHubに公開した
@@ -55,6 +53,9 @@ published: false
 
 例えば、検索窓に「メール」と入力するだけで、メール文面作成に関連するプロンプトが即座に表示されます。「mail」でも「めーる」でも同じ結果が得られるのは、日本語正規化処理のおかげです。
 
+<!-- TODO: 検索の動作GIFアニメーションを挿入 -->
+<!-- 「メール」と入力してサクサク絞り込まれる様子を撮影して挿入 -->
+
 ### ワンクリックでAIツールへ
 
 見つけたプロンプトは、**ワンクリックでChatGPT・Gemini・Claudeに送信**できます。
@@ -64,6 +65,9 @@ published: false
 3. 「コピーしてAIで使う」をクリック
 
 これだけで、お好みのAIツールが新しいタブで開き、プロンプトがクリップボードにコピーされた状態で使い始められます。**生成AIに触れたことがない方でも、30秒で最初のAI体験ができる**設計です。
+
+<!-- TODO: AI起動のGIFアニメーションを挿入 -->
+<!-- ワンクリックでChatGPTが開き、プロンプトが入力されるまでの流れを撮影して挿入 -->
 
 ### カスタムプロンプトの作成
 
@@ -116,55 +120,123 @@ published: false
 本アプリの `normalize()` 関数は3つの正規化を行います:
 
 ```js
-// 1. 全角英数字 → 半角（Unicodeオフセット 0xFEE0）
-// 2. カタカナ → ひらがな（Unicodeオフセット 0x60）
-// 3. 大文字 → 小文字
+/** カタカナをひらがなに変換 */
+const katakanaToHiragana = (str) =>
+  str.replace(/[\u30A1-\u30F6]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) - 0x60)
+  );
+
+/** 全角英数→半角、カタカナ→ひらがな、小文字化 */
+const normalize = (str) => {
+  if (!str) return "";
+  let s = String(str);
+  // 全角英数→半角（Unicodeオフセット 0xFEE0）
+  s = s.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) - 0xfee0)
+  );
+  s = katakanaToHiragana(s);
+  return s.toLowerCase().trim();
+};
 ```
 
-このシンプルな処理だけで、日本語検索の精度が劇的に向上します。
+たった十数行ですが、この正規化があるかないかで日本語検索の精度は劇的に変わります。「メール」「めーる」「MAIL」「ｍａｉｌ」── すべてが同じ検索語として扱われます。
 
 ### スコアリングアーキテクチャ
 
 検索結果の並び順を決めるスコアリングには、**フィールド別の重み付け**を採用しています。
 
-```
-title: 10  ← タイトル一致を最優先
-c1:     5  ← 大カテゴリ
-c2:     4  ← 中カテゴリ
-c3:     3  ← 小カテゴリ
-sub:    2  ← サブカテゴリ
-tag:    2  ← タグ
-id:     1  ← ID
-content: 1  ← 本文
+```js
+const FIELD_WEIGHTS = {
+  title: 10,   // タイトル一致を最優先
+  c1: 5,       // 大カテゴリ
+  c2: 4,       // 中カテゴリ
+  c3: 3,       // 小カテゴリ
+  sub: 2,      // サブカテゴリ
+  tag: 2,      // タグ
+  id: 1,       // ID
+  content: 1,  // プロンプト本文（意図/スマートモードのみ使用）
+};
+
+// スコア計算: 完全一致は3倍、部分一致は2倍
+fields.forEach(([field, value]) => {
+  const weight = FIELD_WEIGHTS[field] || 1;
+  if (value === token) {
+    tokenScore += weight * 3;     // 完全一致ボーナス
+  } else if (value.includes(token)) {
+    tokenScore += weight * 2;     // 部分一致
+  }
+});
 ```
 
-さらに、**完全一致には3倍のボーナス**、**全トークンが含まれる場合は1.5倍のボーナス**が加算されます。これにより、「だいたい合っている結果」ではなく「まさにこれが欲しかった結果」が上位に表示されます。
+さらに、**全トークンが含まれる場合は1.5倍のボーナス**が加算されます。これにより、「だいたい合っている結果」ではなく「まさにこれが欲しかった結果」が上位に表示されます。
 
 ### 意図検索と同義語展開
 
 意図検索（Intent Search）では、100以上のエントリを持つ**同義語マップ（`INTENT_MAP`）**を使って検索語を自動展開します。
 
 ```js
-// 例："メール" で検索すると…
-"メール作成": ["メール", "mail", "eメール", "電子メール", "メッセージ",
-               "送信", "返信", "件名", "本文", "ビジネスメール", ...]
+const INTENT_MAP = {
+  // 文書作成系
+  "メール": ["ビジネスメール", "メッセージ", "コミュニケーション", "メルマガ", "連絡", "返信", "挨拶"],
+  "mail": ["ビジネスメール", "メッセージ", "コミュニケーション", "メルマガ"],
+  "書く": ["文章作成", "作成", "文書", "ライティング", "執筆"],
+  // ... 100エントリ以上が14の意味領域にわたって定義されている
+};
+
+// 逆引きマップの自動生成: 同義語 → 元キー群
+const REVERSE_INTENT_MAP = (() => {
+  const reverse = {};
+  Object.entries(INTENT_MAP).forEach(([key, synonyms]) => {
+    synonyms.forEach((syn) => {
+      const normSyn = normalize(syn);
+      if (!reverse[normSyn]) reverse[normSyn] = new Set();
+      reverse[normSyn].add(normalize(key));
+    });
+  });
+  return reverse;
+})();
 ```
 
-「メール」と入力しただけで、「ビジネスメール」「返信」「件名」といった関連プロンプトも検索結果に含まれます。逆引きマップ（`REVERSE_INTENT_MAP`）も自動生成されるため、双方向の関連語検索が可能です。
+「メール」と入力しただけで、「ビジネスメール」「返信」「挨拶」といった関連プロンプトも検索結果に含まれます。さらに逆引きマップにより、「ビジネスメール」で検索しても「メール」関連のプロンプトがヒットする**双方向の関連語検索**を実現しています。
 
 ### あいまい検索のN-gram類似度
 
 あいまい検索では**バイグラム（2文字組）のDice係数**を使った類似度計算を行います。
 
-```
-"プレゼン" → ["プレ", "レゼ", "ゼン"]
-"プレゼンテーション" → ["プレ", "レゼ", "ゼン", "ンテ", "テー", "ーシ", "ショ", "ョン"]
+```js
+/** Dice係数によるバイグラム類似度 */
+const bigramSimilarity = (a, b) => {
+  const setA = bigrams(a);
+  const setB = bigrams(b);
+  if (setA.size === 0 && setB.size === 0) return 1;
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let intersection = 0;
+  setA.forEach((g) => { if (setB.has(g)) intersection++; });
+  return (2 * intersection) / (setA.size + setB.size);
+};
 
-共通バイグラム: 3 / 全バイグラム: 11
-Dice係数: 2 * 3 / (3 + 8) = 0.545
+/** スライディングウィンドウで部分文字列の最大類似度を計算 */
+const partialBigramSimilarity = (query, text) => {
+  const normQ = normalize(query);
+  const normT = normalize(text);
+  if (normT.includes(normQ)) return 1.0;
+
+  const windowSize = Math.min(normQ.length + 2, normT.length);
+  let maxSim = 0;
+  for (let i = 0; i <= normT.length - windowSize; i++) {
+    const window = normT.substring(i, i + windowSize);
+    const sim = bigramSimilarity(normQ, window);
+    if (sim > maxSim) maxSim = sim;
+  }
+  return Math.max(maxSim, bigramSimilarity(normQ, normT));
+};
 ```
 
-さらに**スライディングウィンドウ方式の部分一致**も実装しており、長いテキストの一部分に対するあいまい検索にも対応しています。
+例えば「プレゼン」と「プレゼンテーション」の類似度は:
+- バイグラム: `["プレ", "レゼ", "ゼン"]` vs `["プレ", "レゼ", "ゼン", "ンテ", "テー", "ーシ", "ショ", "ョン"]`
+- 共通: 3 → Dice係数: `2 * 3 / (3 + 8) = 0.545`
+
+これにより、ユーザーが「プレゼン」と入力しても「プレゼンテーション」関連のプロンプトがしっかりヒットします。
 
 ### スマート検索の統合ロジック
 
