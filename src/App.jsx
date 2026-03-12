@@ -25,6 +25,19 @@ const ANNOUNCEMENTS = [
   },
 ];
 const ANNOUNCEMENTS_DISMISSED_KEY = STORAGE_KEY + "_announcements_dismissed";
+const ANNOUNCEMENTS_COLLAPSED_KEY = STORAGE_KEY + "_announcements_collapsed";
+
+const readJsonArray = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    try { localStorage.removeItem(key); } catch {}
+    return [];
+  }
+};
 const MAX_QUERY_LENGTH = 2000; // URLクエリの安全な上限文字数
 
 const AI_TOOLS = [
@@ -71,6 +84,9 @@ const Icons = {
   Upload: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
   Download: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
   Megaphone: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>,
+  Bell: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
+  ChevronDown: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+  ChevronUp: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>,
   Close: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
 };
 
@@ -1152,17 +1168,41 @@ export default function App() {
   const [exportPreview, setExportPreview] = useState(null);
   const [dataMenu, setDataMenu] = useState(false);
   const dataMenuRef = useRef(null);
-  const [dismissedAnnouncements, setDismissedAnnouncements] = useState(() => {
-    try {
-      const saved = localStorage.getItem(ANNOUNCEMENTS_DISMISSED_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState(() => readJsonArray(ANNOUNCEMENTS_DISMISSED_KEY));
+  const [announcementsCollapsed, setAnnouncementsCollapsed] = useState(() => {
+    try { return localStorage.getItem(ANNOUNCEMENTS_COLLAPSED_KEY) === "1"; } catch { return false; }
   });
+  const [showPastAnnouncements, setShowPastAnnouncements] = useState(false);
+
   const activeAnnouncements = ANNOUNCEMENTS.filter(a => !dismissedAnnouncements.includes(a.id));
+  const pastAnnouncements = ANNOUNCEMENTS.filter(a => dismissedAnnouncements.includes(a.id));
+  const hasAnnouncements = activeAnnouncements.length > 0;
+  const hasPastAnnouncements = pastAnnouncements.length > 0;
+
   const dismissAnnouncement = (id) => {
     setDismissedAnnouncements(prev => {
-      const next = [...prev, id];
+      const next = [...new Set([...prev, id])];
       try { localStorage.setItem(ANNOUNCEMENTS_DISMISSED_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const dismissAllAnnouncements = () => {
+    const allIds = ANNOUNCEMENTS.map(a => a.id);
+    setDismissedAnnouncements(allIds);
+    try { localStorage.setItem(ANNOUNCEMENTS_DISMISSED_KEY, JSON.stringify(allIds)); } catch {}
+  };
+  const restoreAnnouncements = () => {
+    setDismissedAnnouncements([]);
+    setAnnouncementsCollapsed(false);
+    try {
+      localStorage.removeItem(ANNOUNCEMENTS_DISMISSED_KEY);
+      localStorage.removeItem(ANNOUNCEMENTS_COLLAPSED_KEY);
+    } catch {}
+  };
+  const toggleAnnouncementsCollapsed = () => {
+    setAnnouncementsCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem(ANNOUNCEMENTS_COLLAPSED_KEY, next ? "1" : ""); } catch {}
       return next;
     });
   };
@@ -1587,20 +1627,67 @@ export default function App() {
           </div>
         </div>
       </header>
-      {activeAnnouncements.length > 0 && (
+      {ANNOUNCEMENTS.length > 0 && (
         <div className="announcements">
-          {activeAnnouncements.map(a => (
-            <div key={a.id} className="announcement-banner">
-              <div className="announcement-content">
-                <span className="announcement-icon"><Icons.Megaphone /></span>
-                <span className="announcement-label">{a.label}</span>
-                <span className="announcement-date">{a.date}</span>
-                <span className="announcement-title">{a.title}</span>
-                {a.body && <span className="announcement-body">{a.body}</span>}
-              </div>
-              <button className="announcement-dismiss" onClick={() => dismissAnnouncement(a.id)} aria-label="閉じる"><Icons.Close /></button>
+          <div className="announcements-header">
+            <button className="announcements-toggle" onClick={toggleAnnouncementsCollapsed}>
+              <Icons.Bell />
+              <span>お知らせ</span>
+              {hasAnnouncements && <span className="announcements-badge">{activeAnnouncements.length}</span>}
+              {announcementsCollapsed ? <Icons.ChevronDown /> : <Icons.ChevronUp />}
+            </button>
+            <div className="announcements-actions">
+              {hasAnnouncements && activeAnnouncements.length > 1 && (
+                <button className="announcements-action-btn" onClick={dismissAllAnnouncements}>すべて既読</button>
+              )}
             </div>
-          ))}
+          </div>
+          {!announcementsCollapsed && (
+            <>
+              {hasAnnouncements && (
+                <div className="announcements-list">
+                  {activeAnnouncements.map(a => (
+                    <div key={a.id} className="announcement-banner">
+                      <div className="announcement-content">
+                        <span className="announcement-icon"><Icons.Megaphone /></span>
+                        <span className="announcement-label">{a.label}</span>
+                        <span className="announcement-date">{a.date}</span>
+                        <span className="announcement-title">{a.title}</span>
+                        {a.body && <span className="announcement-body">{a.body}</span>}
+                      </div>
+                      <button className="announcement-dismiss" onClick={() => dismissAnnouncement(a.id)} aria-label="閉じる"><Icons.Close /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!hasAnnouncements && (
+                <div className="announcements-empty">新しいお知らせはありません</div>
+              )}
+              {hasPastAnnouncements && (
+                <div className="announcements-past-section">
+                  <button className="announcements-past-toggle" onClick={() => setShowPastAnnouncements(v => !v)}>
+                    {showPastAnnouncements ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
+                    過去のお知らせ ({pastAnnouncements.length})
+                  </button>
+                  {showPastAnnouncements && (
+                    <div className="announcements-past-list">
+                      {pastAnnouncements.map(a => (
+                        <div key={a.id} className="announcement-banner is-past">
+                          <div className="announcement-content">
+                            <span className="announcement-icon"><Icons.Megaphone /></span>
+                            <span className="announcement-label">{a.label}</span>
+                            <span className="announcement-date">{a.date}</span>
+                            <span className="announcement-title">{a.title}</span>
+                            {a.body && <span className="announcement-body">{a.body}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
       <div className="search-container">
