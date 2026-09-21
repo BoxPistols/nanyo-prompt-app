@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { Analytics } from '@vercel/analytics/react';
 import "./App.css";
 import { RAW, INITIAL_PROMPTS } from "./data/prompts";
 import contentsData from "./data/contents.json";
@@ -1807,6 +1808,7 @@ export default function App() {
       {helpModal && <HelpModal onClose={() => setHelpModal(false)} onStartTour={() => { setHelpModal(false); setIntroStep(0); }} onResetData={handleResetData} />}
       {exportPreview && <ExportPreviewModal prompts={exportPreview.prompts} favCount={exportPreview.favCount} onConfirm={doExport} onClose={() => setExportPreview(null)} />}
       {importOptions && <ImportOptionsModal data={importOptions} onConfirm={executeImport} onClose={() => setImportOptions(null)} />}
+      <Analytics />
     </div>
   );
 }
