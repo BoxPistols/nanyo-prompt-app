@@ -15,7 +15,7 @@
 ## 見どころ
 
 - **上流データとの日次自動同期（SHA による差分検知）** — 南陽市の GitHub リポジトリのファイルツリーを毎日取得し、前回の SHA と比べて追加・更新・削除だけを反映してコミットします。[`scraper/sync_upstream.py`](scraper/sync_upstream.py) / [`.github/workflows/sync-nanyo-data.yml`](.github/workflows/sync-nanyo-data.yml)
-- **上流 HTML からの入力フォーム再構成** — 元ページの見出し（`h3`）と `textarea` で組まれた入力欄を、取得した本文テキストから変数として取り出し、見出しとサブ項目の重複をまとめて入力フォームを作り直します（詳細は下の「HTMLプロンプトのパース処理について」）。[`src/App.jsx`](src/App.jsx)（`PromptRunModal`）
+- **上流 HTML からの入力フォーム再構成** — 元ページの見出し（`h3`）と `textarea` で組まれた入力欄を、取得した本文テキストから変数として取り出し、見出しとサブ項目の重複をまとめて入力フォームを作り直します（詳細は下の「HTMLプロンプトのパース処理について」）。[`src/utils/promptContent.js`](src/utils/promptContent.js)（テスト: [`promptContent.test.js`](src/utils/promptContent.test.js)）
 - **表記ゆれに強い検索** — 正規化、関連語への意図展開、bigram の Dice 係数によるあいまい一致を組み合わせ、タイトル・カテゴリをスコア順に並べます。「意図検索」モードでは本文も検索対象にします。[`src/utils/search.js`](src/utils/search.js)
 
 ## クイックスタート
@@ -24,6 +24,7 @@
 npm install
 npm run dev      # 開発サーバー
 npm test         # ユニットテスト (Vitest)
+npm run test:e2e # E2E スモークテスト (Playwright。初回は npx playwright install chromium)
 npm run lint     # ESLint
 npm run build    # 本番ビルド
 ```
@@ -58,11 +59,15 @@ npm run build    # 本番ビルド
 ### プロジェクト構成
 
 - `src/` — React フロントエンド（Vite）
-  - `src/App.jsx` — メインアプリケーション
+  - `src/App.jsx` — 画面全体の状態（検索条件・フィルタ・モーダル）と各部品の組み立て
+  - `src/components/` — ヘッダー、検索欄、カード一覧、各モーダルなどの UI 部品
+  - `src/hooks/` — プロンプト保存（localStorage）、本文データ取得、ガイドツアー、キーボード操作、バックアップなどのロジック
   - `src/data/prompts.js` — カテゴリ定義とデータ処理
   - `src/data/raw_data.json` — プロンプト一覧データ（バンドルに含める）
   - `src/data/contents.json` — プロンプト本文データ（約 6MB。バンドルに含めず、ハッシュ付きアセットとして起動後に取得）
   - `src/utils/search.js` — 検索ロジック
+  - `src/utils/promptContent.js` — 本文から入力欄（変数）を組み立てる処理
+- `e2e/` — Playwright のスモークテスト（`npm run test:e2e`）
 - `scraper/` — プロンプト取得・同期用スクリプト（Python）
   - `scraper/sync_upstream.py` — 日次同期。`src/data/raw_data.json` と `src/data/contents.json` を更新
 - `.github/workflows/` — CI（lint / test / build）と日次データ同期
@@ -93,7 +98,7 @@ AIモデル①の回答：     ← textarea のデフォルト値
 
 **対処方法**
 
-アプリ側（`src/App.jsx`）のセクション変数パース処理で、コロン（`：`）付きサブ項目を直前の親項目に統合するロジックを実装しています。これにより、上記の3項目は「AIモデル①の回答」1つの入力欄に集約されます。
+アプリ側（`src/utils/promptContent.js` の `parsePromptContent`）のセクション変数パース処理で、コロン（`：`）付きサブ項目を直前の親項目に統合するロジックを実装しています。これにより、上記の3項目は「AIモデル①の回答」1つの入力欄に集約されます。
 
 ## 開発者
 
