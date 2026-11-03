@@ -1,10 +1,32 @@
 # 南陽市DX Prompts
 
-山形県南陽市が公開する「一発OK!! 市民も使える！生成AI活用実例集」のプロンプトデータを、検索・閲覧しやすくしたWebアプリです。
+山形県南陽市が公開している生成AIプロンプト実例集を、職員や市民がキーワードで探して、入力欄を埋めるだけで ChatGPT・Gemini・Claude に貼り付けて使えるようにした Web アプリです。
 
-**https://nanyo-prompt.vercel.app/**
+**デモ: [https://nanyo-prompt.vercel.app/](https://nanyo-prompt.vercel.app/)**
 
-南陽市の確認のもと、個人が開発・運営しています。
+[![CI](https://github.com/BoxPistols/nanyo-prompt-app/actions/workflows/ci.yml/badge.svg)](https://github.com/BoxPistols/nanyo-prompt-app/actions/workflows/ci.yml)
+[![Sync Nanyo City Prompt Data](https://github.com/BoxPistols/nanyo-prompt-app/actions/workflows/sync-nanyo-data.yml/badge.svg)](https://github.com/BoxPistols/nanyo-prompt-app/actions/workflows/sync-nanyo-data.yml)
+[![License: MIT](https://img.shields.io/github/license/BoxPistols/nanyo-prompt-app)](./LICENSE)
+
+![プロンプト一覧画面](docs/images/screenshot.png)
+
+南陽市の公式の許諾を得て、DX 担当者と直接調整のうえ Web アプリ化しました。個人が開発・運営しています。
+
+## 見どころ
+
+- **上流データとの日次自動同期（SHA による差分検知）** — 南陽市の GitHub リポジトリのファイルツリーを毎日取得し、前回の SHA と比べて追加・更新・削除だけを反映してコミットします。[`scraper/sync_upstream.py`](scraper/sync_upstream.py) / [`.github/workflows/sync-nanyo-data.yml`](.github/workflows/sync-nanyo-data.yml)
+- **上流 HTML からの入力フォーム再構成** — 元ページの見出し（`h3`）と `textarea` で組まれた入力欄を、取得した本文テキストから変数として取り出し、見出しとサブ項目の重複をまとめて入力フォームを作り直します（詳細は下の「HTMLプロンプトのパース処理について」）。[`src/App.jsx`](src/App.jsx)（`PromptRunModal`）
+- **表記ゆれに強い検索** — 正規化、関連語への意図展開、bigram の Dice 係数によるあいまい一致を組み合わせ、タイトル・カテゴリ・本文をスコア順に並べます。[`src/utils/search.js`](src/utils/search.js)
+
+## クイックスタート
+
+```bash
+npm install
+npm run dev      # 開発サーバー
+npm test         # ユニットテスト (Vitest)
+npm run lint     # ESLint
+npm run build    # 本番ビルド
+```
 
 ## プロンプトデータの出典・著作権
 
@@ -33,19 +55,17 @@
 
 ## 開発
 
-```bash
-npm install
-npm run dev
-```
-
 ### プロジェクト構成
 
 - `src/` — React フロントエンド（Vite）
   - `src/App.jsx` — メインアプリケーション
   - `src/data/prompts.js` — カテゴリ定義とデータ処理
-  - `src/data/raw_data.json` — プロンプトデータ
+  - `src/data/raw_data.json` — プロンプト一覧データ（バンドルに含める）
+  - `src/data/contents.json` — プロンプト本文データ（約 6MB。バンドルに含めず、ハッシュ付きアセットとして起動後に取得）
   - `src/utils/search.js` — 検索ロジック
-- `scraper/` — プロンプト本文取得用スクレイパー（Python）
+- `scraper/` — プロンプト取得・同期用スクリプト（Python）
+  - `scraper/sync_upstream.py` — 日次同期。`src/data/raw_data.json` と `src/data/contents.json` を更新
+- `.github/workflows/` — CI（lint / test / build）と日次データ同期
 
 ### HTMLプロンプトのパース処理について
 

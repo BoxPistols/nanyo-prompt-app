@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Analytics } from '@vercel/analytics/react';
 import "./App.css";
 import { RAW, INITIAL_PROMPTS } from "./data/prompts";
-import contentsData from "./data/contents.json";
+import { loadContents } from "./data/contents";
 import { searchPrompts, SEARCH_MODES } from "./utils/search";
 import { mergePrompts, cleanFavs } from "./syncLogic";
 
@@ -34,7 +34,8 @@ const readJsonArray = (key) => {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
-    try { localStorage.removeItem(key); } catch {}
+    // ストレージ自体が使えない環境 (プライベートモード等) では消せなくても実害がないため無視する
+    try { localStorage.removeItem(key); } catch { /* noop */ }
     return [];
   }
 };
@@ -126,13 +127,17 @@ const OnboardingOverlay = ({ steps, currentStep, onNext, onSkip }) => {
   useEffect(() => {
     if (!step) return;
     const el = document.querySelector(step.selector);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      const r = el.getBoundingClientRect();
-      setPos({ top: r.top, left: r.left, width: r.width, height: r.height });
-    } else {
-      setPos(null);
-    }
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // 位置計測は描画後のフレームで行い、effect 内で同期的に再レンダーを連鎖させない
+    const frame = requestAnimationFrame(() => {
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setPos({ top: r.top, left: r.left, width: r.width, height: r.height });
+      } else {
+        setPos(null);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
   }, [currentStep, step]);
 
   const isLast = currentStep >= steps.length - 1;
@@ -187,7 +192,7 @@ const HelpModal = ({ onClose, onStartTour, onResetData }) => {
         <div className="help-modal-body">
           <section className="help-section">
             <h3>概要</h3>
-            <p>山形県南陽市が公開する「一発OK!! 市民も使える！生成AI活用実例集」のプロンプトデータを、検索・閲覧しやすくしたWebアプリです。南陽市の確認のもと、個人が開発・運営しています。</p>
+            <p>山形県南陽市が公開する「一発OK!! 市民も使える！生成AI活用実例集」のプロンプトデータを、検索・閲覧しやすくしたWebアプリです。南陽市の公式の許諾を得て、DX 担当者と直接調整のうえ Web アプリ化したもので、個人が開発・運営しています。</p>
             <button className="help-tour-btn" onClick={onStartTour}>ガイドツアーを見る</button>
           </section>
 
@@ -457,18 +462,26 @@ const MODAL_INTRO_STEPS = [
 
 const ModalOnboarding = ({ currentStep, totalSteps, step, onNext, onSkip, containerRef }) => {
   const [pos, setPos] = useState(null);
+  // 本来の対象要素が無いとき (入力フォームが無いプロンプト等) は代替テキストを出す。
+  // ref は描画中に読めないため、DOM を調べた結果を state に持つ
+  const [usesFallback, setUsesFallback] = useState(false);
 
   useEffect(() => {
-    if (!step || !containerRef.current) return;
-    const container = containerRef.current;
-    const el = container.querySelector(step.selector)
-      || (step.fallbackSelector && container.querySelector(step.fallbackSelector));
-    if (el) {
-      const r = el.getBoundingClientRect();
-      setPos({ top: r.top, left: r.left, width: r.width, height: r.height });
-    } else {
-      setPos(null);
-    }
+    if (!step) return;
+    const frame = requestAnimationFrame(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const primary = container.querySelector(step.selector);
+      const el = primary || (step.fallbackSelector && container.querySelector(step.fallbackSelector));
+      setUsesFallback(!!step.fallbackSelector && !primary);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setPos({ top: r.top, left: r.left, width: r.width, height: r.height });
+      } else {
+        setPos(null);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
   }, [currentStep, step, containerRef]);
 
   const isLast = currentStep >= totalSteps - 1;
@@ -501,7 +514,7 @@ const ModalOnboarding = ({ currentStep, totalSteps, step, onNext, onSkip, contai
       <div className="onboarding-tooltip" style={{ ...tooltipStyle, zIndex: 10003 }} onClick={e => e.stopPropagation()}>
         <div className="onboarding-step-count">{currentStep + 1} / {totalSteps}</div>
         <h4>{step?.title}</h4>
-        <p>{step?.fallbackSelector && containerRef.current && !containerRef.current.querySelector(step.selector) ? step.fallbackText : step?.text}</p>
+        <p>{usesFallback ? step.fallbackText : step?.text}</p>
         <div className="onboarding-actions">
           <button className="onboarding-skip" onClick={onSkip}>スキップ</button>
           <button className="onboarding-next" onClick={onNext}>{isLast ? '始める' : '次へ →'}</button>
@@ -511,7 +524,41 @@ const ModalOnboarding = ({ currentStep, totalSteps, step, onNext, onSkip, contai
   );
 };
 
-const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) => {
+// 本文データの取得が終わる前にカードを開いたときの待機表示。取得完了で PromptRunModal に差し替わる
+const ContentsLoadingModal = ({ item, failed, onRetry, onClose }) => {
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="modal-backdrop run-modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal run-modal" role="dialog" aria-modal="true" aria-labelledby="contents-loading-title" aria-busy={!failed}>
+        <div className="run-modal-header">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 id="contents-loading-title" className="run-modal-title">{item.title}</h2>
+            <p className="run-modal-meta">#{item.id} - {item.c1} / {item.c2}</p>
+          </div>
+          <button onClick={onClose} className="run-modal-icon-btn" aria-label="閉じる" style={{ fontSize: '20px', color: 'var(--ink2)' }}>×</button>
+        </div>
+        <div className="modal-body contents-status" role="status">
+          {failed ? (
+            <>
+              <p>プロンプト本文を読み込めませんでした。通信状況を確認して、もう一度お試しください。</p>
+              <button className="btn-action btn-primary contents-status-retry" onClick={onRetry}>再読み込み</button>
+            </>
+          ) : (
+            <p>プロンプト本文を読み込んでいます…</p>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const PromptRunModal = ({ item, contents, onClose, selectedAiTool, setSelectedAiTool }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [mobileTab, setMobileTab] = useState("preview"); // "preview" | "form"
   const [isMaximized, setIsMaximized] = useState(false);
@@ -521,7 +568,7 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
   const [modalIntroStep, setModalIntroStep] = useState(-1);
   // コンテンツ解析: 本文抽出、セクション変数抽出、UI混入テキスト除去
   const { promptText, inlinePlaceholders, additionalVars, allPlaceholders } = useMemo(() => {
-    let content = (item.body || contentsData[item.id] || "プロンプトの本文が読み込めませんでした。")
+    let content = (item.body || contents?.[item.id] || "プロンプトの本文が読み込めませんでした。")
       .replace(/[\s]*戻る[\s]*プロンプト作成[\s]*クリップボードにコピーされます。[\s]*$/, '')
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n');
@@ -568,7 +615,7 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
       additionalVars: additional,
       allPlaceholders: [...inline, ...additional],
     };
-  }, [item.id, item.body]);
+  }, [item.id, item.body, contents]);
 
   const [values, setValues] = useState(() => {
     const initial = {};
@@ -593,7 +640,8 @@ const PromptRunModal = ({ item, onClose, selectedAiTool, setSelectedAiTool }) =>
 
   const dismissModalIntro = () => {
     setModalIntroStep(-1);
-    try { localStorage.setItem(STORAGE_KEY + "_modal_intro_done", "1"); } catch {}
+    // 保存できなくても次回また案内が出るだけなので無視する
+    try { localStorage.setItem(STORAGE_KEY + "_modal_intro_done", "1"); } catch { /* noop */ }
   };
 
   useEffect(() => {
@@ -972,8 +1020,6 @@ const CrudModal = ({ item, onSave, onDelete, onClose }) => {
     onSave({ ...form, body });
   };
 
-  const hasContent = form.title && (sections.instructions?.trim() || Object.values(sections).some(v => v?.trim()));
-
   // 変数プレビュー
   const bodyPreview = showAllSections ? buildBody(sections) : (sections.instructions || "");
   const detectedVars = [...new Set((bodyPreview.match(/\{([^}]+)\}/g) || []))];
@@ -1129,7 +1175,9 @@ export default function App() {
                   localStorage.setItem(STORAGE_KEY + "_favs", JSON.stringify([...cleanedFavs]));
                 }
               }
-            } catch {}
+            } catch {
+              // お気に入りの掃除に失敗しても、存在しない ID は一覧に出ないため致命的ではない
+            }
           }
         }
         return result.prompts;
@@ -1138,6 +1186,16 @@ export default function App() {
     } catch(e) { console.error(e); return INITIAL_PROMPTS; }
   });
   const [isLoaded] = useState(true);
+  // 本文は一覧表示に不要なので、一覧を先に描画してから非同期で取得する
+  const [contentsData, setContentsData] = useState(null);
+  const [contentsFailed, setContentsFailed] = useState(false);
+  useEffect(() => {
+    loadContents().then(setContentsData).catch(() => setContentsFailed(true));
+  }, []);
+  const retryLoadContents = () => {
+    setContentsFailed(false);
+    loadContents().then(setContentsData).catch(() => setContentsFailed(true));
+  };
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [searchMode, setSearchMode] = useState("smart");
@@ -1176,14 +1234,14 @@ export default function App() {
   const dismissAnnouncement = (id) => {
     setDismissedAnnouncements(prev => {
       const next = [...new Set([...prev, id])];
-      try { localStorage.setItem(ANNOUNCEMENTS_DISMISSED_KEY, JSON.stringify(next)); } catch {}
+      try { localStorage.setItem(ANNOUNCEMENTS_DISMISSED_KEY, JSON.stringify(next)); } catch { /* 保存できない環境では既読状態がこのセッション内だけ有効になる */ }
       return next;
     });
   };
   const dismissAllAnnouncements = () => {
     const allIds = ANNOUNCEMENTS.map(a => a.id);
     setDismissedAnnouncements(allIds);
-    try { localStorage.setItem(ANNOUNCEMENTS_DISMISSED_KEY, JSON.stringify(allIds)); } catch {}
+    try { localStorage.setItem(ANNOUNCEMENTS_DISMISSED_KEY, JSON.stringify(allIds)); } catch { /* 保存できない環境では既読状態がこのセッション内だけ有効になる */ }
   };
   const [page, setPage] = useState(0);
   const [nextId, setNextId] = useState(() => {
@@ -1194,7 +1252,9 @@ export default function App() {
         const maxId = arr.reduce((m, p) => Math.max(m, p.id || 0), 0);
         return Math.max(3000, maxId + 1);
       }
-    } catch {}
+    } catch {
+      // 保存データを読めない場合は利用者プロンプトも復元されないので、既定の開始値で ID は衝突しない
+    }
     return 3000;
   });
   const [selectedAiTool, setSelectedAiTool] = useState(() => {
@@ -1271,7 +1331,7 @@ export default function App() {
     const handleEsc = (e) => {
       if (e.key === 'Escape') {
         setIntroStep(-1);
-        try { localStorage.setItem(STORAGE_KEY + "_intro_done", "1"); } catch {}
+        try { localStorage.setItem(STORAGE_KEY + "_intro_done", "1"); } catch { /* 保存できなくても次回ツアーが再表示されるだけ */ }
       }
     };
     document.addEventListener('keydown', handleEsc);
@@ -1400,14 +1460,14 @@ export default function App() {
   const filtered = useMemo(() => {
     let list = prompts;
     if (debouncedQuery) {
-      list = searchPrompts(list, debouncedQuery, searchMode, contentsData);
+      list = searchPrompts(list, debouncedQuery, searchMode, contentsData || {});
     }
     if (activeC1) list = list.filter(p => p.c1 === activeC1);
     if (showNew) list = list.filter(p => p.isNew);
     if (showFav) list = list.filter(p => favs.has(p.id));
     if (showUser) list = list.filter(p => p.isUser);
     return list;
-  }, [prompts, debouncedQuery, searchMode, activeC1, showNew, showFav, showUser, favs]);
+  }, [prompts, debouncedQuery, searchMode, contentsData, activeC1, showNew, showFav, showUser, favs]);
 
   // 検索結果のマッチタイプ集計
   const matchTypeSummary = useMemo(() => {
@@ -1570,7 +1630,9 @@ export default function App() {
       Object.keys(localStorage)
         .filter(k => k.startsWith(STORAGE_KEY))
         .forEach(k => localStorage.removeItem(k));
-    } catch {}
+    } catch {
+      // ストレージにアクセスできない場合は消すデータも無いので、そのまま再読み込みする
+    }
     window.location.reload();
   };
 
@@ -1583,11 +1645,11 @@ export default function App() {
           setIntroStep(introStep + 1);
         } else {
           setIntroStep(-1);
-          try { localStorage.setItem(STORAGE_KEY + "_intro_done", "1"); } catch {}
+          try { localStorage.setItem(STORAGE_KEY + "_intro_done", "1"); } catch { /* 保存できなくても次回ツアーが再表示されるだけ */ }
         }
       }} onSkip={() => {
         setIntroStep(-1);
-        try { localStorage.setItem(STORAGE_KEY + "_intro_done", "1"); } catch {}
+        try { localStorage.setItem(STORAGE_KEY + "_intro_done", "1"); } catch { /* 保存できなくても次回ツアーが再表示されるだけ */ }
       }} />}
       <header className="header">
         <div className="header-inner">
@@ -1777,7 +1839,7 @@ export default function App() {
               プロンプトデータは南陽市に著作権が帰属し、<a href="https://creativecommons.org/licenses/by/4.0/deed.ja" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> の下で提供されています。
             </p>
             <p className="footer-app-note">
-              本アプリは南陽市の確認のもと、公開データを活用して個人が開発・運営しています。
+              本アプリは南陽市の公式の許諾を得て、DX 担当者と直接調整のうえ公開データを Web アプリ化したもので、個人が開発・運営しています。
             </p>
           </div>
           <div className="footer-developer">
@@ -1797,9 +1859,18 @@ export default function App() {
         </div>
       </footer>
       {modal && <CrudModal item={modal==="add"?null:modal} onClose={()=>setModal(null)} onSave={handleSave} onDelete={handleDelete} />}
-      {runModal && (
+      {runModal && !runModal.body && !contentsData && (
+        <ContentsLoadingModal
+          item={runModal}
+          failed={contentsFailed}
+          onRetry={retryLoadContents}
+          onClose={()=>setRunModal(null)}
+        />
+      )}
+      {runModal && (runModal.body || contentsData) && (
         <PromptRunModal
           item={runModal}
+          contents={contentsData}
           onClose={()=>setRunModal(null)}
           selectedAiTool={selectedAiTool}
           setSelectedAiTool={setSelectedAiTool}

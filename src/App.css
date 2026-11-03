@@ -1814,3 +1814,23 @@ body.dark .help-shortcuts kbd {
   flex-shrink: 0;
 }
 
+
+/* 本文データ取得待ちの表示 */
+.contents-status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  color: var(--ink2);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.contents-status-retry {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 14px;
+}

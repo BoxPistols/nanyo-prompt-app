@@ -385,7 +385,7 @@ export const searchPrompts = (prompts, query, mode = "smart", contentsData = {})
 
   // スペースでトークン分割 (全角スペースも対応)
   const tokens = rawQuery
-    .split(/[\s　]+/)
+    .split(/[\s\u3000]+/)
     .filter((t) => t.length > 0)
     .map((t) => normalize(t));
 
