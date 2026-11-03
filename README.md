@@ -16,7 +16,7 @@
 
 - **上流データとの日次自動同期（SHA による差分検知）** — 南陽市の GitHub リポジトリのファイルツリーを毎日取得し、前回の SHA と比べて追加・更新・削除だけを反映してコミットします。[`scraper/sync_upstream.py`](scraper/sync_upstream.py) / [`.github/workflows/sync-nanyo-data.yml`](.github/workflows/sync-nanyo-data.yml)
 - **上流 HTML からの入力フォーム再構成** — 元ページの見出し（`h3`）と `textarea` で組まれた入力欄を、取得した本文テキストから変数として取り出し、見出しとサブ項目の重複をまとめて入力フォームを作り直します（詳細は下の「HTMLプロンプトのパース処理について」）。[`src/App.jsx`](src/App.jsx)（`PromptRunModal`）
-- **表記ゆれに強い検索** — 正規化、関連語への意図展開、bigram の Dice 係数によるあいまい一致を組み合わせ、タイトル・カテゴリ・本文をスコア順に並べます。[`src/utils/search.js`](src/utils/search.js)
+- **表記ゆれに強い検索** — 正規化、関連語への意図展開、bigram の Dice 係数によるあいまい一致を組み合わせ、タイトル・カテゴリをスコア順に並べます。「意図検索」モードでは本文も検索対象にします。[`src/utils/search.js`](src/utils/search.js)
 
 ## クイックスタート
 

@@ -1759,6 +1759,16 @@ export default function App() {
             <span className="search-result-count search-no-result">0件 - 検索条件を変えてお試しください</span>
           </div>
         )}
+        {debouncedQuery && searchMode === 'intent' && !contentsData && (
+          <div className="search-info" role="status">
+            <span className="search-result-count search-no-result">
+              {contentsFailed
+                ? '本文を読み込めなかったため、いまは本文を検索できません。'
+                : '本文を読み込み中です。読み込みが終わると本文も検索対象になります。'}
+            </span>
+            {contentsFailed && <button className="search-retry" onClick={retryLoadContents}>本文を再読み込み</button>}
+          </div>
+        )}
       </div>
       <div className="filters">
         <button className={`chip ${!activeC1 && !showNew && !showFav && !showUser ? 'active' : ''}`} onClick={()=>{setActiveC1("");setShowNew(false);setShowFav(false);setShowUser(false);setPage(0)}}>

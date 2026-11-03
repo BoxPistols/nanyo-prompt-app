@@ -1834,3 +1834,17 @@ body.dark .help-shortcuts kbd {
   padding: 0 20px;
   font-size: 14px;
 }
+
+/* 意図検索は本文も対象にするため、本文データが未取得のときはその旨と再取得手段を出す */
+.search-retry {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+.search-retry:hover { background: var(--primary-light); border-color: var(--primary); }
